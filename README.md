@@ -14,6 +14,30 @@ $ source env/bin/activate
 $ pip install -r requirements.txt
 ```
 
+## Project plan
+
+* Read literature
+* Get familiar with Minigrid
+* Explore RL models in minigrid, to
+    * get familiar with the library
+    * get a baseline performance for later comparison
+    * get familiar with RL programming and concepts
+    * create a modular agent which can easily incorporate GPT
+* Explore different ways to integrate GPT into RL model
+    * Directly as policy?
+    * As part of reward function, guided exploration, plausibly useful behaviours
+* Start using the OpenAI API
+    * Look at ways to interact with RL agent/environment
+    * Prompt engineering to get best responses
+    * Encode environment into natural language
+    * Decode GPT response to agent readable action
+* Test different minigrid environments
+    * Focusing on diverse environments, generalizability
+    * Perhaps, look at different environments that are more challenging
+        * Eg. Rouge-Gym, procedurally generated complex environment
+    * Look at transferability of training between environments
+* Compare baseline vs LLM integrated model
+
 
 ## Literature
 
