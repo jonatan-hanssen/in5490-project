@@ -4,6 +4,16 @@ Repository for the IN5490 Group Project
 
 Project paper can be found at [doc/paper.pdf](doc/paper.pdf).
 
+## Installation
+
+Requires ```python>=3.10```. To install the necessary packages, do the following after cloning the repository:
+
+```
+$ python3 -m venv env
+$ source env/bin/activate
+$ pip install -r requirements.txt
+```
+
 
 ## Literature
 
