@@ -32,6 +32,9 @@ $ pip install -r requirements.txt
     * Prompt engineering to get best responses
     * Encode environment into natural language
     * Decode GPT response to agent readable action
+    * Think of ways to cache prompts and responses
+        * Only 50 API requests per second
+        * Expensive?
 * Test different minigrid environments
     * Focusing on diverse environments, generalizability
     * Perhaps, look at different environments that are more challenging
