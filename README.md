@@ -18,6 +18,7 @@ $ pip install -r requirements.txt
 
 * Read literature
 * Get familiar with Minigrid
+    * Get familiar with Gymnasium API
 * Explore RL models in minigrid, to
     * get familiar with the library
     * get a baseline performance for later comparison
@@ -37,6 +38,15 @@ $ pip install -r requirements.txt
         * Eg. Rouge-Gym, procedurally generated complex environment
     * Look at transferability of training between environments
 * Compare baseline vs LLM integrated model
+
+
+## Proof of Concept
+
+![Maze](media/maze.gif)
+
+![Direct](media/direct.png)
+
+![Exploration](media/explore.png)
 
 
 ## Literature
