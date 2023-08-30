@@ -6,7 +6,7 @@ Project paper can be found at [doc/paper.pdf](doc/paper.pdf).
 
 ## Installation
 
-Requires ```python==3.10.*``` (not 3.11 due to torch-rl). To install the necessary packages, do the following after cloning the repository:
+Requires ```python>=3.10```. To install the necessary packages, do the following after cloning the repository:
 
 ```
 $ python3 -m venv env
