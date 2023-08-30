@@ -42,9 +42,15 @@ $ pip install -r requirements.txt
 
 ## Proof of Concept
 
+### Possible maze
+
 ![Maze](media/maze.gif)
 
+### LLM as policy, giving direct action recommendations
+
 ![Direct](media/direct.png)
+
+### LLM aiding exploration by suggesting plausibly useful actions
 
 ![Exploration](media/explore.png)
 
