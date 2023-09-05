@@ -19,16 +19,31 @@ action_list = list()
 for _ in range(1000):
     if not action_list:
         prompt = obs_to_string(observation["image"])
-        answer = policy(prompt)
+        print(prompt)
+        if "nothing" in prompt:
+            answer = "nothing"
+        else:
+            answer = policy(prompt)
 
         if "FORWARD" in answer:
             action_list.append(2)
+
         elif "LEFT" in answer:
             action_list.append(0)
             action_list.append(2)
+
         elif "RIGHT" in answer:
             action_list.append(1)
             action_list.append(2)
+
+        elif "PICK" in answer:
+            action_list.append(3)
+
+        else:
+            action_list.append(env.action_space.sample())
+
+    print(answer)
+    print(action_list)
 
     action = action_list.pop(0)
 

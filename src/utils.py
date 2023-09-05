@@ -66,6 +66,6 @@ def obs_to_string(obs_matrix):
     for ind in door_inds:
         observation_strings.append(ind_to_string(ind, "door"))
 
-    prompt = f"You are a player playing a videogame. It is a top down turn based game, where each turn you can either move RIGHT, LEFT, or FORWARD. You see {', '.join(observation_strings) if observation_strings else 'nothing'}. What should you do? Please only answer with a single of the following commands: RIGHT, LEFT or FORWARD"
+    prompt = f"You are a player playing a videogame. It is a top down turn based game, where each turn you can either move RIGHT, LEFT, FORWARD, or PICK UP objects in front of you. You see {', '.join(observation_strings) if observation_strings else 'nothing'}. What should you do? Please only answer with a single of the following commands: RIGHT, LEFT, FORWARD or PICK UP."
 
     return prompt
