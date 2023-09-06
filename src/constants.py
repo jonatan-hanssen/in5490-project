@@ -54,3 +54,15 @@ DIR_TO_VEC = [
     # Up (negative Y)
     np.array((0, -1)),
 ]
+
+ACTION_TO_IDX = {
+    "left": 0,
+    "right": 1,
+    "forward": 2,
+    "pick": 3,
+    "drop": 4,
+    "toggle": 5,
+    "done": 6,
+}
+
+IDX_TO_ACTION = dict(zip(ACTION_TO_IDX.values(), ACTION_TO_IDX.keys()))
