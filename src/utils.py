@@ -28,24 +28,29 @@ class llama2_70b_policy:
         print(answer)
 
         if "error" in answer or "ERROR" in answer:
+            # This means that we are querying the api too much probably
             time.sleep(3)
+            # Restart connection to api
             self.client = Client("https://ysharma-explore-llamav2-with-tgi.hf.space/")
             action_list.append(env.action_space.sample())
             return
 
         if "FORWARD" in answer:
-            action_list.append(2)
+            action_list.append(constants.ACTION_TO_IDX["forward"])
 
         elif "LEFT" in answer:
-            action_list.append(0)
-            action_list.append(2)
+            action_list.append(constants.ACTION_TO_IDX["left"])
+            action_list.append(constants.ACTION_TO_IDX["forward"])
 
         elif "RIGHT" in answer:
-            action_list.append(1)
-            action_list.append(2)
+            action_list.append(constants.ACTION_TO_IDX["right"])
+            action_list.append(constants.ACTION_TO_IDX["forward"])
 
         elif "PICK" in answer:
-            action_list.append(3)
+            action_list.append(constants.ACTION_TO_IDX["pick"])
+
+        elif "TOGGLE" in answer:
+            action_list.append(constants.ACTION_TO_IDX["toggle"])
 
 
 def obs_to_string(obs_matrix):
