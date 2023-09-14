@@ -1,14 +1,25 @@
 import constants
 import numpy as np
-from gradio_client import Client
-import random
-import time
+from llama import Llama
+import os, time, random
+
+base_path = os.path.dirname(__file__)
 
 
 class llama2_70b_policy:
-    def __init__(self, temperature=0.1):
-        self.client = Client("https://ysharma-explore-llamav2-with-tgi.hf.space/")
+    def __init__(self, temperature=0.6, top_p=0.9, rl_temp=0):
+        self.generator = Llama.build(
+            ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
+            tokenizer_path=os.path.join(
+                base_path, "../llama-2-7b-chat/tokenizer.model"
+            ),
+            max_seq_len=512,
+            max_batch_size=6,
+        )
+
         self.temperature = temperature
+        self.top_p = top_p
+        self.rl_temp = rl_temp
 
     def __call__(self, prompt, action_list, env):
         if "nothing" in prompt:
@@ -18,22 +29,30 @@ class llama2_70b_policy:
         heat = random.random()
         print(f"{heat=}")
 
-        if heat < self.temperature:
+        if heat < self.rl_temp:
             print("here")
             action_list.append(env.action_space.sample())
             return
 
-        answer = self.client.predict(prompt, api_name="/chat")
+        dialogs = [
+            [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+        ]
+
+        result = self.generator.chat_completion(
+            dialogs,  # type: ignore
+            max_gen_len=100,
+            temperature=self.temperature,
+            top_p=self.top_p,
+        )
+
+        answer = result[0]["generation"]["content"]
 
         print(answer)
-
-        if "error" in answer or "ERROR" in answer:
-            # This means that we are querying the api too much probably
-            time.sleep(3)
-            # Restart connection to api
-            self.client = Client("https://ysharma-explore-llamav2-with-tgi.hf.space/")
-            action_list.append(env.action_space.sample())
-            return
 
         if "FORWARD" in answer:
             action_list.append(constants.ACTION_TO_IDX["forward"])
