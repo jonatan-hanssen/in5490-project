@@ -13,23 +13,26 @@ generator = Llama.build(
     max_batch_size=6,
 )
 
+dialog = [
+    {
+        "role": "system",
+        "content": "You are a player playing a videogame. It is a top down turn based game, where each turn you can either move RIGHT, LEFT, FORWARD, PICK UP or DROP objects, or TOGGLE objects in front of you.",
+    }
+]
+
+
 while True:
     inp = input("USER: ")
 
-    dialogs = [
-        [
-            {
-                "role": "user",
-                "content": inp,
-            }
-        ],
-    ]
+    dialog.append({"role": "user", "content": inp})
 
     results = generator.chat_completion(
-        dialogs,  # type: ignore
+        [dialog],  # type: ignore
         max_gen_len=15,
         temperature=0.6,
         top_p=0.9,
     )
     output = results[0]["generation"]["content"]
     print(output)
+
+    dialog.append({"role": "assistant", "content": output})
