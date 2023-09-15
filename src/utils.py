@@ -20,8 +20,14 @@ class llama2_70b_policy:
         self.temperature = temperature
         self.top_p = top_p
         self.rl_temp = rl_temp
+        self.dialog = [
+            {
+                "role": "system",
+                "content": "You are a player playing a videogame. It is a top down turn based game, where each turn you can either move RIGHT, LEFT, FORWARD, PICK UP or DROP objects, or TOGGLE objects in front of you.",
+            }
+        ]
 
-    def __call__(self, prompt, action_list, env):
+    def __call__(self, observation, action_list, env):
         if "nothing" in prompt:
             action_list.append(env.action_space.sample())
             return
@@ -33,6 +39,8 @@ class llama2_70b_policy:
             print("here")
             action_list.append(env.action_space.sample())
             return
+
+        self.dialog.append({"role": "user"
 
         dialogs = [
             [
@@ -135,8 +143,9 @@ def obs_to_string(obs_matrix):
 
     for ind in wall_inds:
         if ind[0] - 3 == 0 and ind[1] - 6 == -1:
-            observation_strings.append(ind_to_string(ind, "wall"))
+            observation_strings.append(ind_to_string(ind, "impassable wall"))
 
-    prompt = f"You are a player playing a videogame. It is a top down turn based game, where each turn you can either move RIGHT, LEFT, FORWARD or PICK UP objects 1 square in front of you. You see {', '.join(observation_strings) if observation_strings else 'nothing'}. What should you do? Please only answer with a single of the following commands: RIGHT, LEFT, FORWARD or PICK UP."
+    prompt = f"You see {', '.join(observation_strings) if observation_strings else 'nothing'}. What should you do?"
+    # Please only answer with a single of the following commands: RIGHT, LEFT, FORWARD or PICK UP."
 
     return prompt
