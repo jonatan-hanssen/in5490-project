@@ -12,7 +12,7 @@ env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
 # observation, info = env.reset(seed=1)
 observation, info = env.reset()
 
-policy = llama2_70b_policy(rl_temp=0.0, dialogue_memory=4)
+policy = llama2_7b_policy(rl_temp=0.0, dialogue_memory=4)
 
 action_list = list()
 
