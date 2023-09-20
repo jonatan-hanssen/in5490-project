@@ -6,7 +6,7 @@ import os, time, random
 base_path = os.path.dirname(__file__)
 
 
-class llama2_70b_policy:
+class llama2_7b_policy:
     def __init__(self, temperature=0.6, top_p=0.9, rl_temp=0, dialogue_memory=24):
         self.generator = Llama.build(
             ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
