@@ -25,8 +25,18 @@ class llama2_70b_policy:
         self.dialog = [
             {
                 "role": "system",
-                "content": "You are a player playing a videogame. It is a top down turn based game, where each turn you can either move RIGHT, LEFT, FORWARD, PICK UP or DROP objects, or TOGGLE objects in front of you. When answering, please only reply with a single of the capitalized commands.",
+                "content": "You are a player playing a videogame. It is a top down turn based game, where each turn you can perform one action. Every action is either a movement, or an interaction. List of possible movement actions: {'RIGHT', 'LEFT', 'FORWARD'}. List of possible interaction actions: {'PICKUP', 'DROP', 'TOGGLE'}. List of interactable objects in the game: {'KEY', 'DOOR', 'CHEST'}. You are to decide which action is performed on the current turn. When answering, you shall strictly only reply with a single one of the capitalized actions from the either the movement action list, or the interaction action list. You must always answer with EXACTLY 1 word.",
+            },
+            {
+                "role": "user",
+                "content": "You see a red key 1 square FORWARD. What should you do?",
+            },
+            {
+                "role": "assistant",
+                "content": "PICKUP",
             }
+            
+            
         ]
 
     def __call__(self, obs_matrix, action_list, env):
@@ -74,7 +84,7 @@ class llama2_70b_policy:
             action_list.append(constants.ACTION_TO_IDX["right"])
             action_list.append(constants.ACTION_TO_IDX["forward"])
 
-        elif "PICK" in answer:
+        elif "PICKUP" in answer:
             action_list.append(constants.ACTION_TO_IDX["pick"])
 
         elif "TOGGLE" in answer:
@@ -86,9 +96,11 @@ class llama2_70b_policy:
         else:
             action_list.append(constants.ACTION_TO_IDX["toggle"])
 
+        action_list.append(constants.ACTION_TO_IDX[input("move: ")])
+
         if len(self.dialog) > self.dialogue_memory:
-            self.dialog.pop(1)
-            self.dialog.pop(1)
+            self.dialog.pop(3)
+            self.dialog.pop(3)
 
 
 
@@ -135,16 +147,16 @@ def obs_to_string(obs_matrix):
             )
 
         if longitude and latitude:
-            string = f"a {state} {color} {object_str} {longitude} and {latitude}"
+            string = f"see a {state} {color} {object_str} {longitude} and {latitude}"
 
         elif longitude and not latitude:
-            string = f"a {state} {color} {object_str} {longitude}"
+            string = f"see a {state} {color} {object_str} {longitude}"
 
         elif not longitude and latitude:
-            string = f"a {state} {color} {object_str} {latitude}"
+            string = f"see a {state} {color} {object_str} {latitude}"
 
         elif not longitude and not latitude:
-            string = f"a {state} {color} {object_str} in your inventory"
+            string = f"have a {state} {color} {object_str} in your inventory"
 
         return string
 
@@ -163,7 +175,7 @@ def obs_to_string(obs_matrix):
 #        if ind[0] - 3 == 0 and ind[1] - 6 == -1:
 #            observation_strings.append(ind_to_string(ind, "impassable wall"))
 
-    prompt = f"You see {', '.join(observation_strings) if observation_strings else 'nothing'}. What should you do?"
+    prompt = f"You {', '.join(observation_strings) if observation_strings else 'nothing'}. What should you do?"
     # Please only answer with a single of the following commands: RIGHT, LEFT, FORWARD or PICK UP."
 
     return prompt
