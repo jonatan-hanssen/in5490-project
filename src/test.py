@@ -12,18 +12,16 @@ env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
 # observation, info = env.reset(seed=1)
 observation, info = env.reset()
 
-policy = llama2_70b_policy(rl_temp=0.0)
+policy = llama2_70b_policy(rl_temp=0.0, dialogue_memory=4)
 
 action_list = list()
 
 for _ in range(1000):
     if not action_list:
-        obs_string = obs_to_string(observation["image"])
-        print(obs_string)
-        policy(obs_string, action_list, env)
+        policy(observation["image"], action_list, env)
         input()
 
-    print([constants.IDX_TO_ACTION[idx] for idx in action_list])
+    # print([constants.IDX_TO_ACTION[idx] for idx in action_list])
     action = action_list.pop(0)
 
     observation, reward, terminated, truncated, info = env.step(action)
