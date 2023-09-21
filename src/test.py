@@ -4,7 +4,7 @@ import time
 import constants
 import numpy as np
 
-from utils import obs_to_string, llama2_70b_policy
+from utils import obs_to_string, llama2_7b_policy
 
 env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
 
@@ -12,7 +12,7 @@ env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
 # observation, info = env.reset(seed=1)
 observation, info = env.reset()
 
-policy = llama2_70b_policy(rl_temp=0.0, dialogue_memory=8)
+policy = llama2_7b_policy(rl_temp=0.0, dialogue_memory=8)
 
 action_list = list()
 

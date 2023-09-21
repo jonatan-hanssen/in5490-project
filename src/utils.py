@@ -232,8 +232,6 @@ class llama2_7b_policy:
         else:
             action_list.append(constants.ACTION_TO_IDX["toggle"])
 
-        action_list.append(constants.ACTION_TO_IDX[input("move: ")])
-
         if len(self.dialog) > self.dialogue_memory:
             self.dialog.pop(3)
             self.dialog.pop(3)
@@ -241,77 +239,56 @@ class llama2_7b_policy:
 
 
 def obs_to_string(obs_matrix):
-    key_inds = np.where(obs_matrix[:, :, 0] == constants.OBJECT_TO_IDX["key"])
-    key_inds = np.stack(key_inds, axis=-1)
-
-    door_inds = np.where(obs_matrix[:, :, 0] == constants.OBJECT_TO_IDX["door"])
-    door_inds = np.stack(door_inds, axis=-1)
-
-    wall_inds = np.where(obs_matrix[:, :, 0] == constants.OBJECT_TO_IDX["wall"])
-    wall_inds = np.stack(wall_inds, axis=-1)
-
-    box_inds = np.where(obs_matrix[:, :, 0] == constants.OBJECT_TO_IDX["box"])
-    box_inds = np.stack(box_inds, axis=-1)
-
-    def ind_to_string(ind, object_str):
-        rel_ind = ind - [3, 6]
-
-        color = constants.IDX_TO_COLOR[obs_matrix[ind[0], ind[1], 1]]
-
-        if object_str == "door":
-            state = constants.IDX_TO_STATE[obs_matrix[ind[0], ind[1], 2]]
-        else:
-            state = ""
-
-        if rel_ind[0] == 0:
-            longitude = ""
-
-        elif rel_ind[0] > 0:
-            longitude = f"{rel_ind[0]} square{'s' if rel_ind[0] != 1 else ''} RIGHT"
-
-        else:
-            longitude = (
-                f"{abs(rel_ind[0])} square{'s' if abs(rel_ind[0]) != 1 else ''} LEFT"
-            )
-
-        if rel_ind[1] == 0:
-            latitude = ""
-
-        else:
-            latitude = (
-                f"{abs(rel_ind[1])} square{'s' if abs(rel_ind[1]) != 1 else ''} FORWARD"
-            )
-
-        if longitude and latitude:
-            string = f"see a {state} {color} {object_str} {longitude} and {latitude}"
-
-        elif longitude and not latitude:
-            string = f"see a {state} {color} {object_str} {longitude}"
-
-        elif not longitude and latitude:
-            string = f"see a {state} {color} {object_str} {latitude}"
-
-        elif not longitude and not latitude:
-            string = f"have a {state} {color} {object_str} in your inventory"
-
-        return string
 
     observation_strings = list()
+    for i in range(len(obs_matrix)):
+        for j in range(len(obs_matrix[i])):
+            cell = obs_matrix[i][j]
 
-    for ind in key_inds:
-        observation_strings.append(ind_to_string(ind, "key"))
+            if cell[0] < 4:
+                continue
 
-    for ind in door_inds:
-        observation_strings.append(ind_to_string(ind, "door"))
+            item = constants.IDX_TO_OBJECT[cell[0]]
+            color = constants.IDX_TO_COLOR[cell[1]]
+            state = f" {constants.IDX_TO_STATE[cell[2]]}" if item == "door" else ""
 
-    for ind in box_inds:
-        observation_strings.append(ind_to_string(ind, "box"))
+            rel_x = i - 3
+            rel_y = j - 6
 
-#    for ind in wall_inds:
-#        if ind[0] - 3 == 0 and ind[1] - 6 == -1:
-#            observation_strings.append(ind_to_string(ind, "impassable wall"))
+            if rel_x == 0:
+                longitude = ""
 
-    prompt = f"You {', '.join(observation_strings) if observation_strings else 'nothing'}. What should you do?"
+            elif rel_x > 0:
+                longitude = f"{rel_x} square{'s' if rel_x != 1 else ''} RIGHT"
+
+            else:
+                longitude = (
+                    f"{abs(rel_x)} square{'s' if abs(rel_x) != 1 else ''} LEFT"
+                )
+
+            if rel_y == 0:
+                latitude = ""
+
+            else:
+                latitude = (
+                    f"{abs(rel_y)} square{'s' if abs(rel_y) != 1 else ''} FORWARD"
+                )
+
+            if longitude and latitude:
+                string = f"see a {state} {color} {item} {longitude} and {latitude}"
+
+            elif longitude and not latitude:
+                string = f"see a {state} {color} {item} {longitude}"
+
+            elif not longitude and latitude:
+                string = f"see a {state} {color} {item} {latitude}"
+
+            elif not longitude and not latitude:
+                string = f"have a {state} {color} {item} in your inventory"
+
+            observation_strings.append(string)
+
+    prompt = f"You {', '.join(observation_strings) if observation_strings else 'see nothing interesting'}. What should you do?"
     # Please only answer with a single of the following commands: RIGHT, LEFT, FORWARD or PICK UP."
 
     return prompt
