@@ -2,8 +2,90 @@ import constants
 import numpy as np
 from llama import Llama
 import os, time, random
+from sentence_transformers import SentenceTransformer
+
 
 base_path = os.path.dirname(__file__)
+
+class llama2_7b_reward_shaper:
+    """Reward shaper
+
+    Takes in an observation matrix, and generates a list of suggestions. These can be compared with actions and reward will be generated
+    """
+
+    def __init__(self, goal, temperature=0.6, top_p=0.9, rl_temp=0, dialogue_memory=24):
+        self.generator = Llama.build(
+            ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
+            tokenizer_path=os.path.join(
+                base_path, "../llama-2-7b-chat/tokenizer.model"
+            ),
+            max_seq_len=2048,
+            max_batch_size=6,
+        )
+
+        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+        self.temperature = temperature
+        self.dialogue_memory = dialogue_memory
+        self.top_p = top_p
+        self.rl_temp = rl_temp
+        self.suggestions = None
+
+
+        self.dialog = [
+            {
+                "role": "system",
+                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the environment, and you should give a list of suggested actions that the player should take to reach their goal. The suggested actions should involve the objects mentioned and the following legal actions: {PICK UP, DROP, TOGGLE}. You should not make assumptions about the environment, only use the information given to you. Separate each suggestion with a new line.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: pick up the purple box. I see a red key and a red door",
+            }
+        ]
+
+    def suggest(self, observation):
+        """Creates a list of suggested actions based on the current observation
+
+        Args:
+            observation: the full observation returned by gymnasium environment
+
+        Returns:
+            A list of strings of suggested actions by the LLM. Also sets self.suggestions
+
+        """
+
+        self.dialog.append({"role": "user", "content": observation})
+        print(self.dialog)
+
+        result = self.generator.chat_completion(
+            [self.dialog],  # type: ignore
+            max_gen_len=100,
+            temperature=self.temperature,
+            top_p=self.top_p,
+        )
+
+        answer = result[0]["generation"]["content"]
+
+        self.dialog.append({"role": "assistant", "content": answer})
+
+    def compare(self, action, cell):
+        """Compares the semantic similarity between an action and the current list of suggested actions
+
+        Args:
+            action: action as Discrete() ie. an integer
+            cell: ndarray of shape (3,)
+
+        Returns:
+            a reward if action and one of the suggested actions is semantically similar
+        """
+
+        action = constants.IDX_TO_ACTION[action]
+        item = constants.IDX_TO_OBJECT[cell[0]]
+        color = constants.IDX_TO_COLOR[cell[1]]
+        state = constants.IDX_TO_COLOR[cell[2]] if item == "door" else None
+
+
+
 
 
 class llama2_7b_policy:
