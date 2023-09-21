@@ -25,7 +25,6 @@ dialog = []
 
 while True:
     inp = input("USER: ")
-    inp = "You are a player playing a videogame, in a top down world. You current goal is: Get the red key from the purple room, unlock the red door and go to the goal. Please give a list of subgoals that are important to achieve this goal, in the form."
     dialog.append({"role": "user", "content": inp})
 
     results = generator.chat_completion(
