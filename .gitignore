@@ -19,3 +19,5 @@
 .*.lb
 
 env/
+__pycache__/
+llama-2-7b-chat/
