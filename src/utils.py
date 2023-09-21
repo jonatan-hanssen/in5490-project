@@ -71,29 +71,6 @@ class llama2_7b_reward_shaper:
             },
         ]
 
-    def observation_caption(self, obs_matrix):
-
-        observation_strings = list()
-        for i in range(len(obs_matrix)):
-            for j in range(len(obs_matrix[i])):
-                cell = obs_matrix[i][j]
-
-                if cell[0] > 3:
-                    item = constants.IDX_TO_OBJECT[cell[0]]
-                    color = constants.IDX_TO_COLOR[cell[1]]
-                    state = f" {constants.IDX_TO_STATE[cell[2]]}" if item == "door" else ""
-
-                    if i == 3 and j == 6:
-                        observation_strings.append(f"have a{state} {color} {item} in my inventory")
-                    else:
-                        observation_strings.append(f"see a{state} {color} {item}")
-
-
-        observation = f"My goal is: {self.goal}. I {', '.join(observation_strings) if observation_strings else 'see nothing interesting'}. What actions do you suggest?"
-
-        return observation
-
-
 
 
     def suggest(self, observation):
@@ -107,6 +84,7 @@ class llama2_7b_reward_shaper:
 
         """
 
+
         self.dialog.append({"role": "user", "content": observation})
 
         result = self.generator.chat_completion(
@@ -118,11 +96,14 @@ class llama2_7b_reward_shaper:
 
         answer = result[0]["generation"]["content"]
 
+        print(observation)
         print(answer)
 
         self.dialog.pop(-1)
 
-    def compare(self, action, cell):
+        self.suggestions = answer
+
+    def compare(self, action, obs_matrix):
         """Compares the semantic similarity between an action and the current list of suggested actions
 
         Args:
@@ -133,10 +114,39 @@ class llama2_7b_reward_shaper:
             a reward if action and one of the suggested actions is semantically similar
         """
 
+        front_cell = obs_matrix[3, 5] # cell in front
+        inventory = obs_matrix[3, 6]
+
+
         action = constants.IDX_TO_ACTION[action]
-        item = constants.IDX_TO_OBJECT[cell[0]]
-        color = constants.IDX_TO_COLOR[cell[1]]
-        state = constants.IDX_TO_COLOR[cell[2]] if item == "door" else None
+        front_item = constants.IDX_TO_OBJECT[front_cell[0]]
+        front_color = constants.IDX_TO_COLOR[front_cell[1]]
+        front_state = f" {constants.IDX_TO_STATE[front_cell[2]]}" if front_item == "door" else ""
+
+        inventory_item = constants.IDX_TO_OBJECT[inventory[0]]
+        inventory_color = constants.IDX_TO_COLOR[inventory[1]]
+        inventory_state = f" {constants.IDX_TO_COLOR[inventory[2]]}" if inventory_item == "door" else ""
+
+        if action == "pick": action = "pick up"
+        if action == "toggle": action = "use"
+
+        if action == "pick up" or action == "use" or action == "drop" or True:
+            string = f"{action}{front_state} {front_color} {front_item}"
+
+            if inventory[0] > 3:
+                string += f" with{inventory_state} {inventory_color} {inventory_item}"
+
+            for suggestion in self.suggestions.splitlines():
+                print(f"{string=}")
+                print(f"{suggestion=}")
+                a, b = self.semantic_model.encode([string, suggestion])
+
+                cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
+
+                print(f"{cos_sim=}")
+
+
+
 
 
 
@@ -238,7 +248,7 @@ class llama2_7b_policy:
 
 
 
-def obs_to_string(obs_matrix):
+def obs_to_string(obs_matrix, positions=True, you=True):
 
     observation_strings = list()
     for i in range(len(obs_matrix)):
@@ -255,40 +265,45 @@ def obs_to_string(obs_matrix):
             rel_x = i - 3
             rel_y = j - 6
 
-            if rel_x == 0:
-                longitude = ""
+            if not rel_x and not rel_y:
+                observation_strings.append(f"have a{state} {color} {item} in {'your' if you else 'my'} inventory")
+                continue
 
-            elif rel_x > 0:
-                longitude = f"{rel_x} square{'s' if rel_x != 1 else ''} RIGHT"
+            string = f"see a{state} {color} {item}"
 
-            else:
-                longitude = (
-                    f"{abs(rel_x)} square{'s' if abs(rel_x) != 1 else ''} LEFT"
-                )
+            if positions:
 
-            if rel_y == 0:
-                latitude = ""
+                if rel_x == 0:
+                    longitude = ""
 
-            else:
-                latitude = (
-                    f"{abs(rel_y)} square{'s' if abs(rel_y) != 1 else ''} FORWARD"
-                )
+                elif rel_x > 0:
+                    longitude = f"{rel_x} square{'s' if rel_x != 1 else ''} RIGHT"
 
-            if longitude and latitude:
-                string = f"see a {state} {color} {item} {longitude} and {latitude}"
+                else:
+                    longitude = (
+                        f"{abs(rel_x)} square{'s' if abs(rel_x) != 1 else ''} LEFT"
+                    )
 
-            elif longitude and not latitude:
-                string = f"see a {state} {color} {item} {longitude}"
+                if rel_y == 0:
+                    latitude = ""
 
-            elif not longitude and latitude:
-                string = f"see a {state} {color} {item} {latitude}"
+                else:
+                    latitude = (
+                        f"{abs(rel_y)} square{'s' if abs(rel_y) != 1 else ''} FORWARD"
+                    )
 
-            elif not longitude and not latitude:
-                string = f"have a {state} {color} {item} in your inventory"
+                if longitude and latitude:
+                    string += f" {longitude} and {latitude}"
+
+                elif longitude and not latitude:
+                    string += f" {longitude}"
+
+                elif not longitude and latitude:
+                    string += f" {latitude}"
 
             observation_strings.append(string)
 
-    prompt = f"You {', '.join(observation_strings) if observation_strings else 'see nothing interesting'}. What should you do?"
+    observation = f"{'You' if you else 'I'} {', '.join(observation_strings) if observation_strings else 'see nothing interesting'}."
     # Please only answer with a single of the following commands: RIGHT, LEFT, FORWARD or PICK UP."
 
-    return prompt
+    return observation

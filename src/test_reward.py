@@ -18,15 +18,17 @@ rewarder = llama2_7b_reward_shaper(observation["mission"])
 for _ in range(1000):
 
 
-    obs = rewarder.observation_caption(observation["image"])
+    obs = obs_to_string(observation["image"], False, False) + " What actions do you suggest?"
     action = 1
 
-    print(obs)
     rewarder.suggest(obs)
 
-    input()
+    action = constants.ACTION_TO_IDX[input("action: ")]
 
+
+    rewarder.compare(action, observation["image"])
     observation, reward, terminated, truncated, info = env.step(action)
+
 
     if terminated or truncated:
         observation, info = env.reset()
