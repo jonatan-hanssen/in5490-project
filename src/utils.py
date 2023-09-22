@@ -13,7 +13,7 @@ class llama2_7b_reward_shaper:
     Takes in an observation matrix, and generates a list of suggestions. These can be compared with actions and reward will be generated
     """
 
-    def __init__(self, goal, temperature=0.6, top_p=0.9, rl_temp=0):
+    def __init__(self, goal, cos_sim_threshold=0.6, reward_multiplier=0.001, temperature=0.6, top_p=0.9, rl_temp=0):
         self.generator = Llama.build(
             ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
             tokenizer_path=os.path.join(
@@ -22,6 +22,9 @@ class llama2_7b_reward_shaper:
             max_seq_len=2048,
             max_batch_size=6,
         )
+
+        self.reward_multiplier = reward_multiplier
+        self.cos_sim_threshold = cos_sim_threshold
 
         self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
 
@@ -35,7 +38,7 @@ class llama2_7b_reward_shaper:
         self.dialog = [
             {
                 "role": "system",
-                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the environment, and you should give a list of suggested actions that the player should take to reach their goal. The suggested actions should involve the objects mentioned. The player can pick up items, drop items and use items. You should not make assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should explore more. Separate each suggestion with a new line.",
+                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the environment, and you should give a list of suggested actions that the player should take to reach their goal. The suggested actions should involve the objects mentioned. The player can pick up items, drop items and use items. You should not make assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should explore more. Separate each suggestion with a new line. Be concise.",
             },
             {
                 "role": "user",
@@ -84,6 +87,8 @@ class llama2_7b_reward_shaper:
 
         """
 
+        observation = f"My goal is: {self.goal}. {observation}"
+
 
         self.dialog.append({"role": "user", "content": observation})
 
@@ -114,7 +119,7 @@ class llama2_7b_reward_shaper:
             a reward if action and one of the suggested actions is semantically similar
         """
 
-        front_cell = obs_matrix[3, 5] # cell in front
+        front_cell = obs_matrix[3, 5]
         inventory = obs_matrix[3, 6]
 
 
@@ -127,24 +132,66 @@ class llama2_7b_reward_shaper:
         inventory_color = constants.IDX_TO_COLOR[inventory[1]]
         inventory_state = f" {constants.IDX_TO_COLOR[inventory[2]]}" if inventory_item == "door" else ""
 
-        if action == "pick": action = "pick up"
-        if action == "toggle": action = "use"
 
-        if action == "pick up" or action == "use" or action == "drop" or True:
-            string = f"{action}{front_state} {front_color} {front_item}"
+        ###  Captioning action based on cell and inventory ###
+
+        caption = None
+
+        if action == "pick":
+            if front_cell[0] < 4: # nothing to pick up
+                caption = "do nothing"
+
+            elif inventory[0] > 3: # inventory already full
+                caption = "do nothing"
+
+            else:
+                caption = f"pick up{front_state} {front_color} {front_item}"
+
+        elif action == "drop":
+            if inventory[0] < 4: # nothing to drop
+                caption = "do nothing"
+
+            elif inventory[0] < 4: # nothing to drop
+                caption = "do nothing"
+
+            elif front_item != "empty": # cannot drop onto occupied tile
+                caption = "do nothing"
+
+            else:
+                caption = f"drop{inventory_state} {inventory_color} {inventory_item}"
+
+        elif action == "toggle":
+
+            if front_item == "box":
+                caption = f"destroy {front_color} box"
+
+            if front_cell[0] < 4:
+                caption = "do nothing"
+            else:
+                caption = f"use{front_state} {front_color} {front_item}"
+
 
             if inventory[0] > 3:
-                string += f" with{inventory_state} {inventory_color} {inventory_item}"
+                caption += f" with{inventory_state} {inventory_color} {inventory_item}"
 
-            for suggestion in self.suggestions.splitlines():
-                print(f"{string=}")
-                print(f"{suggestion=}")
-                a, b = self.semantic_model.encode([string, suggestion])
+        if not caption: return 0
 
-                cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
+        max_cos_sim = 0
+        print(f"{caption=}")
+        for suggestion in self.suggestions.splitlines():
+            print(f"{suggestion=}")
+            a, b = self.semantic_model.encode([caption, suggestion])
 
-                print(f"{cos_sim=}")
+            cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
 
+            print(f"{cos_sim=}")
+            if cos_sim > max_cos_sim: max_cos_sim = cos_sim
+
+
+        if max_cos_sim > self.cos_sim_threshold:
+            return cos_sim * self.reward_multiplier
+        else:
+            return 0
 
 
 

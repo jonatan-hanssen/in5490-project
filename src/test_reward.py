@@ -18,7 +18,10 @@ rewarder = llama2_7b_reward_shaper(observation["mission"])
 for _ in range(1000):
 
 
-    obs = obs_to_string(observation["image"], False, False) + " What actions do you suggest?"
+    # stringy = [[f"{cell[0]}{cell[1]}{cell[2]}" for cell in row] for row in observation["image"]]
+    # for row in stringy:
+    #     print(row)
+    obs = obs_to_string(observation["image"], False, False)
     action = 1
 
     rewarder.suggest(obs)
