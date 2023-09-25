@@ -34,6 +34,7 @@ class llama2_7b_reward_shaper:
         self.suggestions = None
         self.goal = goal
 
+        self.caption_set = set()
 
         self.dialog = [
             {
@@ -164,17 +165,19 @@ class llama2_7b_reward_shaper:
 
             if front_item == "box":
                 caption = f"destroy {front_color} box"
-
-            if front_cell[0] < 4:
-                caption = "do nothing"
             else:
-                caption = f"use{front_state} {front_color} {front_item}"
+                if front_cell[0] < 4:
+                    caption = "do nothing"
+                else:
+                    caption = f"use{front_state} {front_color} {front_item}"
 
 
-            if inventory[0] > 3:
-                caption += f" with{inventory_state} {inventory_color} {inventory_item}"
+                if inventory[0] > 3:
+                    caption += f" with{inventory_state} {inventory_color} {inventory_item}"
 
-        if not caption: return 0
+        if not caption or caption in self.caption_set: return 0
+
+        self.caption_set.add(caption)
 
         max_cos_sim = 0
         print(f"{caption=}")
