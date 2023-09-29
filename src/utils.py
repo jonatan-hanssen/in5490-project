@@ -7,13 +7,22 @@ from sentence_transformers import SentenceTransformer
 
 base_path = os.path.dirname(__file__)
 
+
 class llama2_7b_reward_shaper:
     """Reward shaper
 
     Takes in an observation matrix, and generates a list of suggestions. These can be compared with actions and reward will be generated
     """
 
-    def __init__(self, goal, cos_sim_threshold=0.6, reward_multiplier=0.001, temperature=0.6, top_p=0.9, rl_temp=0):
+    def __init__(
+        self,
+        goal,
+        cos_sim_threshold=0.6,
+        reward_multiplier=0.001,
+        temperature=0.6,
+        top_p=0.9,
+        rl_temp=0,
+    ):
         self.generator = Llama.build(
             ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
             tokenizer_path=os.path.join(
@@ -26,7 +35,7 @@ class llama2_7b_reward_shaper:
         self.reward_multiplier = reward_multiplier
         self.cos_sim_threshold = cos_sim_threshold
 
-        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
 
         self.temperature = temperature
         self.top_p = top_p
@@ -75,8 +84,6 @@ class llama2_7b_reward_shaper:
             },
         ]
 
-
-
     def suggest(self, observation):
         """Creates a list of suggested actions based on the current observation
 
@@ -89,7 +96,6 @@ class llama2_7b_reward_shaper:
         """
 
         observation = f"My goal is: {self.goal}. {observation}"
-
 
         self.dialog.append({"role": "user", "content": observation})
 
@@ -123,46 +129,49 @@ class llama2_7b_reward_shaper:
         front_cell = obs_matrix[3, 5]
         inventory = obs_matrix[3, 6]
 
-
         action = constants.IDX_TO_ACTION[action]
         front_item = constants.IDX_TO_OBJECT[front_cell[0]]
         front_color = constants.IDX_TO_COLOR[front_cell[1]]
-        front_state = f" {constants.IDX_TO_STATE[front_cell[2]]}" if front_item == "door" else ""
+        front_state = (
+            f" {constants.IDX_TO_STATE[front_cell[2]]}" if front_item == "door" else ""
+        )
 
         inventory_item = constants.IDX_TO_OBJECT[inventory[0]]
         inventory_color = constants.IDX_TO_COLOR[inventory[1]]
-        inventory_state = f" {constants.IDX_TO_COLOR[inventory[2]]}" if inventory_item == "door" else ""
-
+        inventory_state = (
+            f" {constants.IDX_TO_COLOR[inventory[2]]}"
+            if inventory_item == "door"
+            else ""
+        )
 
         ###  Captioning action based on cell and inventory ###
 
         caption = None
 
         if action == "pick":
-            if front_cell[0] < 4: # nothing to pick up
+            if front_cell[0] < 4:  # nothing to pick up
                 caption = "do nothing"
 
-            elif inventory[0] > 3: # inventory already full
+            elif inventory[0] > 3:  # inventory already full
                 caption = "do nothing"
 
             else:
                 caption = f"pick up{front_state} {front_color} {front_item}"
 
         elif action == "drop":
-            if inventory[0] < 4: # nothing to drop
+            if inventory[0] < 4:  # nothing to drop
                 caption = "do nothing"
 
-            elif inventory[0] < 4: # nothing to drop
+            elif inventory[0] < 4:  # nothing to drop
                 caption = "do nothing"
 
-            elif front_item != "empty": # cannot drop onto occupied tile
+            elif front_item != "empty":  # cannot drop onto occupied tile
                 caption = "do nothing"
 
             else:
                 caption = f"drop{inventory_state} {inventory_color} {inventory_item}"
 
         elif action == "toggle":
-
             if front_item == "box":
                 caption = f"destroy {front_color} box"
             else:
@@ -171,11 +180,13 @@ class llama2_7b_reward_shaper:
                 else:
                     caption = f"use{front_state} {front_color} {front_item}"
 
-
                 if inventory[0] > 3:
-                    caption += f" with{inventory_state} {inventory_color} {inventory_item}"
+                    caption += (
+                        f" with{inventory_state} {inventory_color} {inventory_item}"
+                    )
 
-        if not caption or caption in self.caption_set: return 0
+        if not caption or caption in self.caption_set:
+            return 0
 
         self.caption_set.add(caption)
 
@@ -188,18 +199,13 @@ class llama2_7b_reward_shaper:
             cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
 
             print(f"{cos_sim=}")
-            if cos_sim > max_cos_sim: max_cos_sim = cos_sim
-
+            if cos_sim > max_cos_sim:
+                max_cos_sim = cos_sim
 
         if max_cos_sim > self.cos_sim_threshold:
             return cos_sim * self.reward_multiplier
         else:
             return 0
-
-
-
-
-
 
 
 class llama2_7b_policy:
@@ -230,9 +236,7 @@ class llama2_7b_policy:
             {
                 "role": "assistant",
                 "content": "PICKUP",
-            }
-            
-            
+            },
         ]
 
     def __call__(self, obs_matrix, action_list, env):
@@ -297,9 +301,7 @@ class llama2_7b_policy:
             self.dialog.pop(3)
 
 
-
 def obs_to_string(obs_matrix, positions=True, you=True):
-
     observation_strings = list()
     for i in range(len(obs_matrix)):
         for j in range(len(obs_matrix[i])):
@@ -316,13 +318,14 @@ def obs_to_string(obs_matrix, positions=True, you=True):
             rel_y = j - 6
 
             if not rel_x and not rel_y:
-                observation_strings.append(f"have a{state} {color} {item} in {'your' if you else 'my'} inventory")
+                observation_strings.append(
+                    f"have a{state} {color} {item} in {'your' if you else 'my'} inventory"
+                )
                 continue
 
             string = f"see a{state} {color} {item}"
 
             if positions:
-
                 if rel_x == 0:
                     longitude = ""
 
