@@ -14,20 +14,20 @@
 \title{IN5490 Project}
 
 \author{\IEEEauthorblockN{Adrian Duric}
-\IEEEauthorblockA{\textit{Master Student, Dept. Informatics} \\
-\textit{The faculty of Mathematics}\\
+\IEEEauthorblockA{\textit{Master Student, Dept. of Informatics} \\
+\textit{The Faculty of Mathematics}\\
 Oslo, Norway \\
 adriandu@ifi.uio.no}
 \and
 \IEEEauthorblockN{Gregor Kajda}
 \IEEEauthorblockA{\textit{Master Student, Dept. of Informatics} \\
-\textit{The faculty of Mathematics}\\
+\textit{The Faculty of Mathematics}\\
 Oslo, Norway \\
 grzegork@ifi.uio.no}
 \and
 \IEEEauthorblockN{Jonatan Hoffmann Hanssen}
 \IEEEauthorblockA{\textit{Master Student, Dept. of Informatics} \\
-\textit{The faculty of Mathematics}\\
+\textit{The Faculty of Mathematics}\\
 Oslo, Norway \\
 jonatahh@ifi.uio.no}
 }
@@ -36,7 +36,7 @@ jonatahh@ifi.uio.no}
 
 \begin{abstract}
 
-Reinforcement Learning!
+Reinforcement Learning! And LLMs!
 
 \end{abstract}
 
@@ -50,23 +50,15 @@ One of the central challenges of reinforcement learning is that rewards are ofte
 
 \section{Background and Related Work}
 
- Degus is the future in blockchain techonology, created by using the revolutionary "degus system", which creates twice as many coins per unit of computational power. By accepting the "degus mindset", you will be able to acheive things you never ever thought possible. The degus mindset includes the following:
+\subsection{Large Language Models as Policy in Reinforcement Learning} 
 
-Always Striving for Excellence
-Generate passive revenue through the degus system
-Live day by day: "Carpe diem"
+In recent research into integrating LLMs into the RL framework, many of the methods proposed include ways of making the LLM influence the policy of the RL agent. \cite{omni} considers open-ended learning algorithms in which the value of the agent attempting certain tasks can be evaluated by estimating the the interestingness of the task. The notion of interestingness is then thought of as what task would intuitively be interesting for a human to try in the context of learning in an environment. Some main factors contributing to this interestingness are how likely one is to succeed in doing the task, as well as whether learning the given task may increase the likelihood of succeeding in other tasks. Considering that LLMs are trained on extremely large amounts of human-written text containing human knowledge and intuition, this leads to the idea that if the LLM was told to propose interesting actions for the RL agent to learn in its environment, it could be able to communicate human intuition directly to the agent. This would in turn let the agent learn with increased sample efficiency as the human intuition-based input it receives would make it decide to perform intuitively smarter actions, particularly in the early stages of exploring its environment.
 
-By following these simple steps, and by buying several GPUs, you will be able to produce around 15 deguscoins per computational unit, unleashing the true power of the blockchain.
+The algorithm proposed in this paper involves prompting the LLM with the agent's state observation, a list of tasks the agent already does well, and a list of available tasks for the LLM to deem as either interesting or boring. After sorting available tasks into interesting and boring, it assigns sampling weights to them, giving much higher weights to interesting tasks than boring ones, thus directly influencing the agent's policy by altering probabilities of which action it then chooses to do. In \cite{idm}, another paper proposing using the LLM as a policy optimizer, has a similar approach in which the state observation is tokenized and passed to the LLM, though in their experiment, goals and action histories are also tokenized and passed. Here, too, the LLM response is fed back into a task-specific RL model, which in turn influences policy probabilities of certain actions being taken. In general, many of the novel methods suggested involve the LLM suggesting actions for the agent to perform in a given context, and its output influencing the agent policy. 
 
-What is the deguscoin, you may ask? The deguscoin represents a complete transformation of the traditional financial system (tradfi). By using deguscoin, you will be able to achieve returns of investment (ROIs) beyond mere human comprehension. One single deguscoin, when inserted into an economy, can have such destructive power that even mere days after, the market will be beyond recognition. By invoking the "degus mindset" (DM) you will be able to send around 15\% more currency per coin, achieving ROIs which would send the average economist into a seizure.
+\subsection{Large Language Models as Reward in Reinforcement Learning}
 
-Market players are predicting that by the end of this year, around 50\% of all transactions will be done under the degus system (DS), not even counting derivatives.
-
-By the end of this year, around 50\% of all transactions will be done under the degus system, not even counting derivatives.
-
-– Market players
-
-What are you waiting for? Purchase deguscoin right now, and leave your earthly desires behind! 
+Another often proposed method of involving LLMs in RL, is to have it influence the reward the agent receives in certain states. \cite{ellm} 
 
 \section{Method}
 
