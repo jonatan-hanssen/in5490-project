@@ -11,7 +11,7 @@
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
 
-\title{IN5490 Project}
+\title{Large Language Models in Reinforcement Learning - A Comparison of Methods}
 
 \author{\IEEEauthorblockN{Adrian Duric}
 \IEEEauthorblockA{\textit{Master Student, Dept. Informatics} \\
@@ -36,16 +36,21 @@ jonatahh@ifi.uio.no}
 
 \begin{abstract}
 
-Reinforcement Learning!
-
+Reinforcement Learning (RL) algorithms suffer when rewards are sparce and the state-action space is large. Even tasks which appear relatively simple can prove intractable if the completion of the task requires subtasks to be completed first, or if the reward only comes when the entire task has been completed. In such cases, random exploration is unlikely to lead the agent to discover a solution to the problem. The apparent simplicity of such problems is often due to human intuition, which allow us to quickly see possible solutions to a diverse set of problems. Large Language Models (LLMs) are trained on large corpura of human written text, and have been shown to capture parts of this intuition in many tasks \cite{sparks}. In recent years, LLMs have been succesfully used to aid RL agents in more efficient exploration, and have allowed them to solve problems which previous methods have been unable to \cite{omni} \cite{ellm}. We compare different methods for integrating an LLM into the deep learning reinforcement algorithm proximal policy optimization (PPO), and compare their efficiency against eachother. We find that BEST METHOD gives the best sample efficiency, outperforming normal PPO by PERCENTAGE in METRIC.
 \end{abstract}
 
 \begin{IEEEkeywords}
+large language models, reinforcement learning, minigrid, proximal policy optimization
 \end{IEEEkeywords}
 
 \section{Introduction}
 
-One of the central challenges of reinforcement learning is that rewards are often both extremely rare and delayed, which means that optimizing a reinforcement learning algorithm requires significant trial and error \cite[423]{brunton}. Furthermore, in many problems the state-action spaces are enormous, meaning that uniform exploration is unlikely to find good solutions in a reasonable amount of time. Many methods have been developed to deal with this issue, for example by introducing auxilliary reward functions that use domain knowledge, or which reward the agent for learning novel skills. However, hand picking which actions to reward can lead to imitation rather than optimal behaviour, and novelty is not always useful \cite[2]{ellm}. With the introduction of Large Language Models (LLMs), a new area of research has opened up, attempting to use the vast amount of human knowledge encoded in these models to increase the performance of reinforcement learning algorithms \cite{survey}. These 
+One of the central challenges of reinforcement learning is that rewards are often both extremely rare and delayed, which means that optimizing a reinforcement learning algorithm requires significant trial and error \cite[423]{brunton}. Furthermore, in many problems the state-action spaces are enormous, meaning that uniform exploration is unlikely to find good solutions in a reasonable amount of time. Many methods have been developed to deal with this issue, for example by introducing auxilliary reward functions that use domain knowledge to reward actions which are considered good, or which reward the agent for learning novel skills. However, hand picking which actions to reward can lead to imitation rather than optimal behaviour, and novelty is not always useful \cite[1]{ellm}. In recent years, LLMs have shown remarkable capabilities in problem solving and planning \cite{sparks}, qualities which traditional RL agents often lack. Thus, a new area of research has emerged, which attemps to use the vast amount of human knowledge encoded in these models to increase the performance of reinforcement learning algorithms \cite{survey}. These LLM assisted RL agents have been able to outperform state-of-the-art RL methods in many problems \cite{omni} \cite{ellm} \cite{idm}.
+\\
+
+These papers explore different methods of integrating LLMs into a standard reinforcement learning training loop, from altering the policy directly to introducing an auxilliary reward function. In this paper, we compare both methods in the same environment using the same deep reinforcement algorithm (PPO), and compare their results to eachother to explore how LLMs best can be integrated into RL.
+
+
 
 
 \section{Background and Related Work}
