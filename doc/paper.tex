@@ -50,12 +50,8 @@ large language models, reinforcement learning, minigrid, proximal policy optimiz
 \section{Introduction}
 
 One of the central challenges of reinforcement learning is that rewards are often both extremely rare and delayed, which means that optimizing a reinforcement learning algorithm requires significant trial and error \cite[423]{brunton}. Furthermore, in many problems the state-action spaces are enormous, meaning that uniform exploration is unlikely to find good solutions in a reasonable amount of time. Many methods have been developed to deal with this issue, for example by introducing auxilliary reward functions that use domain knowledge to reward actions which are considered good, or which reward the agent for learning novel skills. However, hand picking which actions to reward can lead to imitation rather than optimal behaviour, and novelty is not always useful \cite[1]{ellm}. In recent years, LLMs have shown remarkable capabilities in problem solving and planning \cite{sparks}, qualities which traditional RL agents often lack. Thus, a new area of research has emerged, which attemps to use the vast amount of human knowledge encoded in these models to increase the performance of reinforcement learning algorithms \cite{survey}. These LLM assisted RL agents have been able to outperform state-of-the-art RL methods in many problems \cite{omni} \cite{ellm} \cite{idm}.
-\\
 
 These papers explore different methods of integrating LLMs into a standard reinforcement learning training loop, from altering the policy directly to introducing an auxilliary reward function. In this paper, we compare both methods in the same environment using the same deep reinforcement algorithm (PPO), and compare their results to eachother to explore how LLMs best can be integrated into RL.
-
-
-
 
 \section{Background and Related Work}
 
@@ -87,7 +83,7 @@ A standard PPO algorithm with no LLM integration, as a baseline. In this case, w
 
 \subsubsection{PPO with LLM integration as part of the policy}
 
-In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done by INSERT HOW IT IS DONE HERE.
+In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then all actions that the agent could take, given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the probability values that the normal PPO algorithm outputs, and a new probability distribution is created, where semantically similar actions are weighted higher than others.
 
 \subsubsection{LLM integrated into reward function}
 
