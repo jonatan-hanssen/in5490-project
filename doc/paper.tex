@@ -67,9 +67,9 @@ The algorithm proposed in this paper involves prompting the LLM with the agent's
 
 \subsection{Large Language Models as Reward in Reinforcement Learning}
 
-Another often proposed method of involving LLMs in RL, is to have it influence the reward the agent receives in certain states. In particular, \cite{ellm} cites the infrequency of rewards as a common bottleneck in RL algorithms, due to how long exploratory trajectories often have to be before the agent reaches some desirable state. This holds true especially for large, complex environments, where the probability of reaching favorable states among a huge number of non-favorable states becomes even smaller. Similarly to the papers proposing LLMs to influence policy, this paper too seeks to make use of human intuition and knowledge present in the vast training data that state-of-the-art LLMs have been trained upon, to make the agent prioritize exploring plausibly useful behaviors first, based on some intelligent forethought provided by the LLM.
+Another proposed method of involving LLMs in RL, is to have it influence the reward the agent receives for taking certain actions in certain states. In particular, \cite{ellm} cites the infrequency of rewards as a common bottleneck in RL algorithms, due to how long exploratory trajectories often have to be before the agent reaches some desirable state. This holds true especially for large, complex environments, where the probability of reaching favorable states among a huge number of non-favorable states becomes even smaller. Similarly to the papers proposing LLMs to influence policy, this paper too seeks to make use of human intuition and knowledge present in the vast training data that state-of-the-art LLMs have been trained upon, to make the agent prioritize exploring plausibly useful behaviors first, based on some intelligent forethought provided by the LLM.
 
-However, rather than doing so through directly influencing action probabilities in the policy, the paper suggests rewarding similarity to goal states described by the LLM. At certain timesteps, the LLM would then be prompted with a state observation from the agent. It would be told to suggest goal states for the agent to reach. Some timesteps later, if the new state observation is semantically similar to the previous LLM output, this would give a reward to the agent. Thus, the proposed algorithm makes use of LLMs in two ways: first to generate what the LLM perceives as desirable states, then later to assess similarity between a natural-text description of the current state and the previously described goal state. The first use case in particular utilizes the presence of human intuition in LLMs, as a human too would often be able to intuitively figure out what is desirable to achieve in some environment.
+However, rather than doing so through directly influencing action probabilities in the policy, the paper suggests rewarding the agent if it takes actions that are semantically similar to actions suggested by an LLM. At certain timesteps, the LLM is prompted with a state observation from the agent, and is asked to suggest actions for the agent to take. If the agent then takes actions which are semantically similar to the suggested actions, it recieves a reward. Thus, the proposed algorithm makes use of LLMs in two ways: first to generate what the LLM perceives as desirable actions, then later to assess similarity between a natural-language description of the agents action and the previously suggested actions. The first use case in particular utilizes the presence of human intuition in LLMs, as a human would often be able to intuitively figure out what is desirable to achieve in some environment.
 
 \section{Methods}
 
@@ -83,11 +83,11 @@ Using this environment, we explore three different ways of training the agent:
 
 \subsubsection{Standard Proximal Policy Optimization}
 
-A standard PPO algorithm with no LLM integration, as a baseline.
+A standard PPO algorithm with no LLM integration, as a baseline. In this case, we StableBaselines' implementation with the following hyperparamers: HYPERPARAMETERS HERE.
 
 \subsubsection{PPO with LLM integration as part of the policy}
 
-where the LLM directly influences which action is taken next
+In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done by INSERT HOW IT IS DONE HERE.
 
 \subsubsection{LLM integrated into reward function}
 
@@ -109,5 +109,8 @@ I would like to acknowledge myself for being a absolute legend.
 
 \bibliographystyle{apalike}
 \bibliography{bibliography}
+
+
+\section*{Appendix}
 
 \end{document}
