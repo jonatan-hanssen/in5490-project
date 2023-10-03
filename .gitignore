@@ -4,6 +4,7 @@
 *-blx.aux
 *-blx.bib
 *.run.xml
+*.pdf
 
 *.aux
 *.lof
