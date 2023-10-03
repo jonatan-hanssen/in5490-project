@@ -55,6 +55,9 @@ These papers explore different methods of integrating LLMs into a standard reinf
 
 \section{Background and Related Work}
 
+RL informed by natural language is a relatively new field, where research before 2018 have been limited to relatively small corpora or synthetic language \cite[1]{survey}. With the introduction of Large Language Models, many new possibilities have opened up, and in recent years there have been many successful integrations of these models into traditional RL \cite{omni} \cite{ellm} \cite{idm}.
+
+
 \subsection{Large Language Models as Policy in Reinforcement Learning} 
 
 In recent research into integrating LLMs into the RL framework, many of the methods proposed include ways of making the LLM influence the policy of the RL agent. \cite{omni} considers open-ended learning algorithms in which the value of the agent attempting certain tasks can be evaluated by estimating the the interestingness of the task. The notion of interestingness is then thought of as what task would intuitively be interesting for a human to try in the context of learning in an environment. Some main factors contributing to this interestingness are how likely one is to succeed in doing the task, as well as whether learning the given task may increase the likelihood of succeeding in other tasks. Considering that LLMs are trained on extremely large amounts of human-written text containing human knowledge and intuition, this leads to the idea that if the LLM was told to propose interesting actions for the RL agent to learn in its environment, it could be able to communicate human intuition directly to the agent. This would in turn let the agent learn with increased sample efficiency as the human intuition-based input it receives would make it decide to perform intuitively smarter actions, particularly in the early stages of exploring its environment.
