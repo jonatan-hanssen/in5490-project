@@ -68,7 +68,11 @@ Another often proposed method of involving LLMs in RL, is to have it influence t
 
 However, rather than doing so through directly influencing action probabilities in the policy, the paper suggests rewarding similarity to goal states described by the LLM. At certain timesteps, the LLM would then be prompted with a state observation from the agent. It would be told to suggest goal states for the agent to reach. Some timesteps later, if the new state observation is semantically similar to the previous LLM output, this would give a reward to the agent. Thus, the proposed algorithm makes use of LLMs in two ways: first to generate what the LLM perceives as desirable states, then later to assess similarity between a natural-text description of the current state and the previously described goal state. The first use case in particular utilizes the presence of human intuition in LLMs, as a human too would often be able to intuitively figure out what is desirable to achieve in some environment.
 
-\section{Method}
+\section{Methods}
+
+\subsection{Problem Formulation}
+
+We train a PPO model in a Partially Observable Markov Decision Process (POMDP). A POMDP is defined by a tuple $(S, A, T, R, O, \Omega, \gamma)$. Here, $s \in S$ denotes the state the environment is in and $a \in A$ denotes an action the agent can take. Based on the state and the action taken, the agent receives an observation $o \in O$ which depends on the new environment state and the action taken by $O(o | s, a)$. $T(s' | s, a)$ denotes the state transfer function, which gives a new state based on the previous state and action. The environment we use is part of Minigrid \cite{minigrid}.
 
 Deguser trenger god plass for å trives, og du bør investere i et størst mulig bur som gir dyrene mulighet til å klatre, grave i et tykt strølag og bevege seg i flere etasjer.
 
@@ -94,9 +98,6 @@ Hvor ofte buret bør rengjøres avhenger av størrelsen og hvor mange som bor de
 \section*{Acknowledgment}
 
 I would like to acknowledge myself for being a absolute legend.
-
-\section*{References}
-
 
 \bibliographystyle{apalike}
 \bibliography{bibliography}
