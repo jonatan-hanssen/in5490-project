@@ -72,21 +72,26 @@ However, rather than doing so through directly influencing action probabilities 
 
 \subsection{Problem Formulation}
 
-We train a PPO model in a Partially Observable Markov Decision Process (POMDP). A POMDP is defined by a tuple $(S, A, T, R, O, \Omega, \gamma)$. Here, $s \in S$ denotes the state the environment is in and $a \in A$ denotes an action the agent can take. Based on the state and the action taken, the agent receives an observation $o \in O$ which depends on the new environment state and the action taken by $O(o | s, a)$. $T(s' | s, a)$ denotes the state transfer function, which gives a new state based on the previous state and action. The environment we use is part of Minigrid \cite{minigrid}.
+We train a PPO model in a Partially Observable Markov Decision Process (POMDP). A POMDP is defined by a tuple $(S, A, T, R, O, \Omega, \gamma)$. Here, $s \in S$ denotes the state the environment is in and $a \in A$ denotes an action the agent can take. Based on the state and the action taken, the agent receives an observation $o \in \Omega$ which depends on the new environment state and the action taken by $O(o | s, a)$. $T(s' | s, a)$ denotes the state transfer function, which gives a new state based on the previous state and action. $r \in R$ is the reward given by the environment given an action and a state, while $\gamma$ is the discount factor.  The environment we use is part of Minigrid \cite{minigrid}. 
 
-Deguser trenger god plass for å trives, og du bør investere i et størst mulig bur som gir dyrene mulighet til å klatre, grave i et tykt strølag og bevege seg i flere etasjer.
+\subsection{Approach}
 
-Mange dyreeiere konstruerer sine egne løsninger, for eksempel med et stort, gammelt akvarium som underdel og et nettingbur på toppen av dette. Da får du full oversikt over hva som skjer også nederst i buret, samtidig som du slipper at sand, strø og høy søles ut i rommet. Ikke la degusene gå direkte på gitterbunn eller annet hardt underlag, det kan skade føttene.
+Using this environment, we explore three different ways of training the agent:
 
-Buret kan du innrede med f.eks. røtter og greiner til å klatre på, hus av treverk, rør til å krype gjennom og løpehjul. Et løpehjul til degus bør være minst 25 cm i diameter og ha tett gulv og vegger slik at halen ikke kan komme i klem. Bunnmaterialet i buret bør være et tykt lag av støvfritt smådyrstrø som er egnet for graving. Det finnes flere egnede strøtyper å få kjøpt. Bland gjerne inn litt tørr blomsterjord eller sand i bunnmaterialet. Hvis du henter sand ute, bør du desinfisere den ved frysing eller steking fr den brukes i buret. Degusene trenger også tilgang på fiberrikt materiale som høy, revet papir eller treull til bygge- og redemateriale.
+\subsubsection{Standard Proximal Policy Optimization}
 
-For å være sikker på at alle degusene som bor sammen kan trekke seg unna og hvile, bør de få hvert sitt sovehus. Deguser kan også finne på å forsvare maten sin overfor andre deguser. Når flere deguser bor i samme bur, bør du derfor ha flere matskåler plassert på forskjellige steder i buret slik at alle får tilgang til mat når de ønsker det. Dyrene må alltid ha tilgang på friskt vann, som best gis i en drikkeflaske.
+A standard PPO algorithm with no LLM integration, as a baseline.
 
-For å holde pelsen i orden har deguser behov for å bade i finkornet sand flere ganger i uka. Slik badesand får du kjøpt i dyrebutikken. Et tungt kar som ikke velter så lett er fint som sandbadekar. Det kan være lurt å fjerne sandbadet mellom hvert bad for å unngå at den brukes som toalett.
+\subsubsection{PPO with LLM integration as part of the policy}
 
-Rengjøring
+where the LLM directly influences which action is taken next
 
-Hvor ofte buret bør rengjøres avhenger av størrelsen og hvor mange som bor der. Som en tommelfingerregel bør du skifte bunnmaterialet og vaske bunn og innredning én gang i uka. 
+\subsubsection{LLM integrated into reward function}
+
+LLM integration into the reward function, where actions similar to those suggested by the LLM grant a small auxilliary reward. The agent is trained as in the baseline.
+
+
+We evaluate these models on the same Minigrid environments and compare their performance against eachother.
 
 \section{Experiments}
 
