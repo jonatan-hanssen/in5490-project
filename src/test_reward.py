@@ -4,7 +4,7 @@ import time
 import constants
 import numpy as np
 
-from utils import obs_to_string, llama2_7b_reward_shaper
+from utils import obs_to_string, llama2_7b_reward_shaper, caption_action
 
 env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
 
@@ -22,7 +22,6 @@ for _ in range(1000):
     # for row in stringy:
     #     print(row)
     obs = obs_to_string(observation["image"], False, False)
-    action = 1
 
     rewarder.suggest(obs)
 
@@ -30,6 +29,13 @@ for _ in range(1000):
 
 
     rewarder.compare(action, observation["image"])
+
+
+    # all_captions = [
+    #     caption_action(act, observation["image"]) for act in range(7)
+    # ]
+
+
     observation, reward, terminated, truncated, info = env.step(action)
 
 

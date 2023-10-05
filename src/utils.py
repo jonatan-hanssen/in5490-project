@@ -125,7 +125,7 @@ class llama2_7b_reward_shaper:
         Returns:
             a reward if action and one of the suggested actions is semantically similar
         """
-        caption = caption(action, obs_matrix)
+        caption = caption_action(action, obs_matrix)
 
         if not caption or caption in self.caption_set:
             return 0
@@ -150,7 +150,7 @@ class llama2_7b_reward_shaper:
             return 0
 
 
-def caption_action(action, observation):
+def caption_action(action, obs_matrix):
     """takes in an action and the observation and returns a string caption"""
 
     front_cell = obs_matrix[3, 5]
@@ -171,27 +171,39 @@ def caption_action(action, observation):
 
     ###  Captioning action based on cell and inventory ###
 
-    caption = None
+    caption = "do nothing"
+
+    if action == "done":
+        caption = "mark the game as completed"
+
+    if action == "forward":
+        if front_item == "empty":
+            caption = "move forward"
+        elif front_item == "door" and front_state == " open":
+            caption = "move forward"
+
+    if action == "right":
+        caption = "turn right"
+
+    if action == "left":
+        caption = "turn left"
 
     if action == "pick":
         if front_cell[0] < 4:  # nothing to pick up
-            caption = "do nothing"
+            pass
 
         elif inventory[0] > 3:  # inventory already full
-            caption = "do nothing"
+            pass
 
         else:
             caption = f"pick up{front_state} {front_color} {front_item}"
 
     elif action == "drop":
         if inventory[0] < 4:  # nothing to drop
-            caption = "do nothing"
-
-        elif inventory[0] < 4:  # nothing to drop
-            caption = "do nothing"
+            pass
 
         elif front_item != "empty":  # cannot drop onto occupied tile
-            caption = "do nothing"
+            pass
 
         else:
             caption = f"drop{inventory_state} {inventory_color} {inventory_item}"
@@ -200,13 +212,12 @@ def caption_action(action, observation):
         if front_item == "box":
             caption = f"destroy {front_color} box"
         else:
-            if front_cell[0] < 4:
-                caption = "do nothing"
-            else:
+            if front_cell[0] >= 4:
                 caption = f"use{front_state} {front_color} {front_item}"
 
             if inventory[0] > 3:
                 caption += f" with{inventory_state} {inventory_color} {inventory_item}"
+
     return caption
 
 
