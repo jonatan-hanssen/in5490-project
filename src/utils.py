@@ -120,70 +120,12 @@ class llama2_7b_reward_shaper:
 
         Args:
             action: action as Discrete() ie. an integer
-            cell: ndarray of shape (3,)
+            obs_matrix: observation matrix 7x7x3
 
         Returns:
             a reward if action and one of the suggested actions is semantically similar
         """
-
-        front_cell = obs_matrix[3, 5]
-        inventory = obs_matrix[3, 6]
-
-        action = constants.IDX_TO_ACTION[action]
-        front_item = constants.IDX_TO_OBJECT[front_cell[0]]
-        front_color = constants.IDX_TO_COLOR[front_cell[1]]
-        front_state = (
-            f" {constants.IDX_TO_STATE[front_cell[2]]}" if front_item == "door" else ""
-        )
-
-        inventory_item = constants.IDX_TO_OBJECT[inventory[0]]
-        inventory_color = constants.IDX_TO_COLOR[inventory[1]]
-        inventory_state = (
-            f" {constants.IDX_TO_COLOR[inventory[2]]}"
-            if inventory_item == "door"
-            else ""
-        )
-
-        ###  Captioning action based on cell and inventory ###
-
-        caption = None
-
-        if action == "pick":
-            if front_cell[0] < 4:  # nothing to pick up
-                caption = "do nothing"
-
-            elif inventory[0] > 3:  # inventory already full
-                caption = "do nothing"
-
-            else:
-                caption = f"pick up{front_state} {front_color} {front_item}"
-
-        elif action == "drop":
-            if inventory[0] < 4:  # nothing to drop
-                caption = "do nothing"
-
-            elif inventory[0] < 4:  # nothing to drop
-                caption = "do nothing"
-
-            elif front_item != "empty":  # cannot drop onto occupied tile
-                caption = "do nothing"
-
-            else:
-                caption = f"drop{inventory_state} {inventory_color} {inventory_item}"
-
-        elif action == "toggle":
-            if front_item == "box":
-                caption = f"destroy {front_color} box"
-            else:
-                if front_cell[0] < 4:
-                    caption = "do nothing"
-                else:
-                    caption = f"use{front_state} {front_color} {front_item}"
-
-                if inventory[0] > 3:
-                    caption += (
-                        f" with{inventory_state} {inventory_color} {inventory_item}"
-                    )
+        caption = caption(action, obs_matrix)
 
         if not caption or caption in self.caption_set:
             return 0
@@ -206,6 +148,66 @@ class llama2_7b_reward_shaper:
             return cos_sim * self.reward_multiplier
         else:
             return 0
+
+
+def caption_action(action, observation):
+    """takes in an action and the observation and returns a string caption"""
+
+    front_cell = obs_matrix[3, 5]
+    inventory = obs_matrix[3, 6]
+
+    action = constants.IDX_TO_ACTION[action]
+    front_item = constants.IDX_TO_OBJECT[front_cell[0]]
+    front_color = constants.IDX_TO_COLOR[front_cell[1]]
+    front_state = (
+        f" {constants.IDX_TO_STATE[front_cell[2]]}" if front_item == "door" else ""
+    )
+
+    inventory_item = constants.IDX_TO_OBJECT[inventory[0]]
+    inventory_color = constants.IDX_TO_COLOR[inventory[1]]
+    inventory_state = (
+        f" {constants.IDX_TO_COLOR[inventory[2]]}" if inventory_item == "door" else ""
+    )
+
+    ###  Captioning action based on cell and inventory ###
+
+    caption = None
+
+    if action == "pick":
+        if front_cell[0] < 4:  # nothing to pick up
+            caption = "do nothing"
+
+        elif inventory[0] > 3:  # inventory already full
+            caption = "do nothing"
+
+        else:
+            caption = f"pick up{front_state} {front_color} {front_item}"
+
+    elif action == "drop":
+        if inventory[0] < 4:  # nothing to drop
+            caption = "do nothing"
+
+        elif inventory[0] < 4:  # nothing to drop
+            caption = "do nothing"
+
+        elif front_item != "empty":  # cannot drop onto occupied tile
+            caption = "do nothing"
+
+        else:
+            caption = f"drop{inventory_state} {inventory_color} {inventory_item}"
+
+    elif action == "toggle":
+        if front_item == "box":
+            caption = f"destroy {front_color} box"
+        else:
+            if front_cell[0] < 4:
+                caption = "do nothing"
+            else:
+                caption = f"use{front_state} {front_color} {front_item}"
+
+            if inventory[0] > 3:
+                caption += f" with{inventory_state} {inventory_color} {inventory_item}"
+    return caption
 
 
 class llama2_7b_policy:
