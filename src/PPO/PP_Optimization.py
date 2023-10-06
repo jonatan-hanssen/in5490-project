@@ -28,6 +28,12 @@ def init_weightsNbias(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 def make_env(env_name, seed):
+    """
+    Descr:
+        Returns a "vectorized" environenment, meaning that it is wrapped in a gymnasium vector, allowing for
+        some aditional functionality, such as parallel training of many environments.
+    """
+
     def env_gen():
         env = gym.make(env_name, render_mode="rgb_array")
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -43,8 +49,7 @@ class Agent(nn.Module):
     Descr:
         The agents task is to decide the next action to perform, and evaluate the
         possible future rewards, a.k.a. the value function, based on the current state
-        the agent is in. In our case the agents chooses the
-
+        the agent is in.
     """
 
     def __init__(self, envs):
@@ -109,7 +114,7 @@ class PPO:
 
     def forward(self):
         # Containers for values needed in calculation of surrogate loss
-        single_obs_shape = (
+        self.single_obs_shape = (
             int(np.array(envs.single_observation_space["image"].shape).prod()),
         )
 
@@ -119,6 +124,7 @@ class PPO:
         self.actions = torch.zeros(
             (self.args.ep_steps, self.args.num_envs) + self.envs.single_action_space
         ).to(device)
+        # The ActorCritic Network outputs log probabilities
         self.logprobs = torch.zeros((self.args.ep_steps, self.args.num_envs)).to(device)
         self.rewards = torch.zeros((self.args.ep_steps, self.args.num_envs)).to(device)
         self.dones = torch.zeros((self.args.ep_steps, self.args.num_envs)).to(device)
@@ -130,13 +136,15 @@ class PPO:
 
         # Episode: Moving n steps and estimating the value funvtion for each step
         for rollout in range(self.rollouts + 1):
-            for step in self.args.ep_steps:
+            for step in range(self.args.ep_steps):
                 self.global_step += self.args.num_envs
                 self.observations[step] = next_observation
                 self.dones[step] = next_done
 
                 with torch.no_grad():
-                    action, logprob, _, value = self.agent(next_observation)
+                    action, logprob, _, value = self.agent.get_action_and_value(
+                        next_observation
+                    )
                     self.values[step] = value.flatten()
                 self.actions[step] = action
                 self.logprobs[step] = logprob
@@ -182,6 +190,8 @@ class PPO:
                             * self.returns[t + 1]
                         )
                     self.advantages = self.returns + self.values
+                    # Standard advantage estimation of General Advantage Estimation
+                    # proposed by the authors of PPO is not used
                 else:
                     returns = torch.zeros_like(rewards).to(device)
                     for t in reversed(range(self.args.num_steps)):
@@ -198,6 +208,61 @@ class PPO:
                             * returns[t + 1]
                         )
                     self.advantages = returns - self.values
+
+    def backward(self):
+        # Optimization of the surrogate loss
+
+        # Flattening all containers in order to compute components of surrogate losses
+        # using minibatches
+        batch_observations = self.observations.reshape((-1,) + self.single_obs_shape)
+        batch_logprobs = self.logprobs.reshape(-1)
+        batch_actions = self.actions.reshape((-1,) + envs.single_action_space.shape)
+        batch_advantages = self.advantages.reshape(-1)
+        batch_values = self.values.rehsape(-1)
+        batch_returns = self.returns.reshape(-1)
+
+        batch_idx = np.arange(self.args.input_size)
+        for epoch in range(self.args.epochs):
+            # Shuffle the batch indexes to introduce additional noise and variance
+            np.random.shuffle(batch_idx)
+            for start in range(0, self.args.input_size, self.args.batch_size):
+                end = start + self.args.batch_size
+                minibatch_idx = batch_idx[start:end]
+
+        newAction, newLogprob, entropy, newValue = agent.get_action_and_value(
+            batch_observations[minibatch_idx], batch_actions.long()[minibatch_idx]
+        )
+
+        # The probability ratio of the new policy vs the old policy
+        policy_logRatio = newLogprob - batch_logprobs[minibatch_idx]
+        policy_ratio = policy_logRatio.exp()
+
+        minibatch_advantages = batch_advantages[minibatch_idx]
+        # TODO: Check if minibatch_advantages need normalization or not
+
+        pGrad_clip1 = policy_ratio * minibatch_advantages
+        pGrad_clip2 = minibatch_advantages * torch.clamp(
+            policy_ratio, 1.0 - self.args.clip_epislon, 1.0 + self.args.clip_epislon
+        )
+        # Whenever a paper writes an equation as the expected value, take the mean() of that function
+        # to imitate the expected value
+        clip_Loss = torch.min(pGrad_clip1, pGrad_clip2).mean()
+
+        # Computing Value Loss
+        value_loss = (
+            (1 / 2)
+            * ((newValue.view(-1) - batch_values[minibatch_idx]) ** 2).mean()
+            * self.args.coef1
+        )
+
+        # Computing Entropy Loss
+        entropy_loss = entropy.mean() * self.args.coef2
+
+        surrogate_loss = clip_Loss - value_loss + entropy_loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm(self.agent.parameters(), self.args.max_grad_norm)
+        self.optimizer.step()
 
     def seeding(self):
         random.seed(self.args.seed)
