@@ -2,7 +2,8 @@ import argparse
 import os
 from distutils.util import strtobool
 import time
-from torch.utils.tensorboard import SummaryWriter
+
+# from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import random
 import torch
@@ -50,7 +51,11 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
-            init_weightsNbias(nn.Linear(np.array(envs.single_observation_space["image"].shape).prod(), 64)),
+            init_weightsNbias(
+                nn.Linear(
+                    np.array(envs.single_observation_space["image"].shape).prod(), 64
+                )
+            ),
             nn.Tanh(),
             init_weightsNbias(nn.Linear(64, 64)),
             nn.Tanh(),
@@ -58,7 +63,11 @@ class Agent(nn.Module):
         )
 
         self.actor = nn.Sequential(
-            init_weightsNbias(nn.Linear(np.array(envs.single_observation_space["image"].shape).prod(), 64)),
+            init_weightsNbias(
+                nn.Linear(
+                    np.array(envs.single_observation_space["image"].shape).prod(), 64
+                )
+            ),
             nn.Tanh(),
             init_weightsNbias(nn.Linear(64, 64)),
             nn.Tanh(),
@@ -85,10 +94,19 @@ if __name__ == "__main__":
     # print(envs.single_action_space.n)
     # observation, info = envs.reset(seed=42)
     # print(observation["image"])
-    print(observation.transpose(2,0,1))
-    # agent = Agent(envs)
+    # print(observation.transpose(2,0,1))
+    agent = Agent(envs)
+    # print(agent.state_dict())
+    # src_dir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+    src_dir = os.path.dirname(__file__)
+
+    torch.save(agent.state_dict(), src_dir + "/PPO.txt")
+
+    model = Agent(envs)
+    model.load_state_dict(torch.load(src_dir + "/PPO.txt"))
+    
     # next_observation = torch.Tensor(envs.reset()[0])
 
-    # action, _, _, _ = agent.get_action_and_value(next_observation)
-    # print(action) 
 
+    # action, _, _, _ = agent.get_action_and_value(next_observation)
+    # print(action)

@@ -43,7 +43,7 @@ def make_env(env_name, seed):
 
     return env_gen
 
-
+# TODO: Transfer model to device a.k.a. to GPU
 class Agent(nn.Module):
     """
     Descr:
@@ -100,9 +100,10 @@ class Agent(nn.Module):
 
 class PPO:
     def __init__(self, args):
+        # TODO: Replace Argparse with a json containing all parameters and clean up __init__
         self.args = args()
         self.seeding()
-
+        # TODO: Remove gymnasium vectorization of environment
         seeds = [random.randint(0, 20000) for _ in range(env_n)]
         self.envs = gym.vector.SyncVector(
             [make_env(env_name, seeds[i]) for i in range(self.args.num_envs)]
@@ -112,7 +113,15 @@ class PPO:
         _, _ = envs.reset(seed=self.args.seed)
         self.rollouts = self.args.tot_steps // self.args.batch_size
 
-    def forward(self):
+    def save_model(self, model):
+        file_path = os.path.dirname(__file__) + "/model.zip"
+        torch.save(self.agent.state_dict(), file_path)
+
+    def load_model(self, model):
+        file_path = os.path.dirname(__file__) + "/model.zip"
+        model.load_state_dict(torch.load(file_path))
+
+    def train(self):
         # Containers for values needed in calculation of surrogate loss
         self.single_obs_shape = (
             int(np.array(envs.single_observation_space["image"].shape).prod()),
@@ -131,138 +140,152 @@ class PPO:
         self.values = torch.zeros((self.args.ep_steps, self.args.num_envs)).to(device)
 
         # Initializing the next step
-        next_observation = torch.zeros(self.envs.reset()[0]).to(device)
-        next_done = torch.zeros(self.args.num_envs).to(device)
+        # next_observation = torch.zeros(self.envs.reset()[0]).to(device)
+        # next_done = torch.zeros(self.args.num_envs).to(device)
 
         # Episode: Moving n steps and estimating the value funvtion for each step
         for rollout in range(self.rollouts + 1):
-            for step in range(self.args.ep_steps):
-                self.global_step += self.args.num_envs
-                self.observations[step] = next_observation
-                self.dones[step] = next_done
+            self.forward(rollout)
+            self.backward()
 
-                with torch.no_grad():
-                    action, logprob, _, value = self.agent.get_action_and_value(
-                        next_observation
-                    )
-                    self.values[step] = value.flatten()
-                self.actions[step] = action
-                self.logprobs[step] = logprob
+    def forward(self, rollout_num):
+        for step in range(self.args.ep_steps):
+            self.global_step += self.args.num_envs
+            if rollout_num == 0:
+                self.observations[step] = torch.zeros(self.envs.reset()[0]).to(device)
+                self.dones[step] = torch.zeros(self.args.num_envs).to(device)
 
-                next_observation, reward, done, truncated, info = envs.step(
-                    action.cpu().numpy()
-                )
-                # Converting to tensor and transfering to gpu for faster computation
-                self.rewards[step] = torch.Tensor(reward).to(device).view(-1)
-
-                next_observation, next_done = (
-                    torch.Tensor(next_observation).to(device),
-                    torch.Tensor(next_done).to(device),
-                )
-
-            # Now that the agent(-s) has(-ve) played out an episode, it's time
-            # to backtrack all steps, and compute the discounted rewards
             with torch.no_grad():
-                next_value = agent.get_value(next_observation).reshape(1, -1)
-                # General advanatage estimation proposed in the original paper on PPO
-                if self.args.gae:
-                    returns = torch.zeros_like(rewards).to(device)
-                    # lastgaelam = 0
-                    for t in reversed(range(self.args.num_steps)):
-                        if t == self.args.num_steps - 1:
-                            # "nextnonterminal" is a environment specific variable indicating if the
-                            # agent has finished the game before reaching time step limit
-                            nextnonterminal = 1.0 - next_done
-                            nextvalues = next_value
-                        else:
-                            nextnonterminal = 1.0 - self.dones[t + 1]
+                action, logprob, _, value = self.agent.get_action_and_value(
+                    next_observation
+                )
+                self.values[step] = value.flatten()
+            self.actions[step] = action
+            self.logprobs[step] = logprob
 
-                        delta = (
-                            rewards[t]
-                            + self.args.gamma * values[t + 1] * nextnonterminal
-                            - values[t]
-                        )
-                        self.returns[t] = (
-                            delta
-                            + self.args.gamma
-                            * self.args.gae_lambda
-                            * nextnonterminal
-                            * self.returns[t + 1]
-                        )
-                    self.advantages = self.returns + self.values
-                    # Standard advantage estimation of General Advantage Estimation
-                    # proposed by the authors of PPO is not used
-                else:
-                    returns = torch.zeros_like(rewards).to(device)
-                    for t in reversed(range(self.args.num_steps)):
-                        if t == self.args.num_steps - 1:
-                            nextnonterminal = 1.0 - next_done
-                            nextvalues = next_value
-                        else:
-                            nextnonterminal = 1.0 - self.dones[t + 1]
+            next_observation, reward, done, truncated, info = envs.step(
+                action.cpu().numpy()
+            )
+            # Converting to tensor and transfering to gpu for faster computation
+            self.rewards[step] = torch.Tensor(reward).to(device).view(-1)
 
-                        returns = (
-                            self.rewards[t]
-                            * self.args.gamma
-                            * nextnonterminal
-                            * returns[t + 1]
-                        )
-                    self.advantages = returns - self.values
+            next_observation, next_done = (
+                torch.Tensor(next_observation).to(device),
+                torch.Tensor(next_done).to(device),
+            )
+
+        # Now that the agent(-s) has(-ve) played out an episode, it's time
+        # to backtrack all steps, and compute the discounted rewards
+        with torch.no_grad():
+            next_value = agent.get_value(next_observation).reshape(1, -1)
+            # General advanatage estimation proposed in the original paper on PPO
+            if self.args.gae:
+                returns = torch.zeros_like(rewards).to(device)
+                # lastgaelam = 0
+                for t in reversed(range(self.args.num_steps)):
+                    if t == self.args.num_steps - 1:
+                        # "nextnonterminal" is a environment specific variable indicating if the
+                        # agent has finished the game before reaching time step limit
+                        nextnonterminal = 1.0 - next_done
+                        nextvalues = next_value
+                    else:
+                        nextnonterminal = 1.0 - self.dones[t + 1]
+
+                    delta = (
+                        rewards[t]
+                        + self.args.gamma * values[t + 1] * nextnonterminal
+                        - values[t]
+                    )
+                    self.returns[t] = (
+                        delta
+                        + self.args.gamma
+                        * self.args.gae_lambda
+                        * nextnonterminal
+                        * self.returns[t + 1]
+                    )
+                self.advantages = self.returns + self.values
+                # Standard advantage estimation of General Advantage Estimation
+                # proposed by the authors of PPO is not used
+            else:
+                returns = torch.zeros_like(rewards).to(device)
+                for t in reversed(range(self.args.num_steps)):
+                    if t == self.args.num_steps - 1:
+                        nextnonterminal = 1.0 - next_done
+                        nextvalues = next_value
+                    else:
+                        nextnonterminal = 1.0 - self.dones[t + 1]
+
+                    returns = (
+                        self.rewards[t]
+                        * self.args.gamma
+                        * nextnonterminal
+                        * returns[t + 1]
+                    )
+                self.advantages = returns - self.values
 
     def backward(self):
         # Optimization of the surrogate loss
 
         # Flattening all containers in order to compute components of surrogate losses
         # using minibatches
-        batch_observations = self.observations.reshape((-1,) + self.single_obs_shape)
-        batch_logprobs = self.logprobs.reshape(-1)
-        batch_actions = self.actions.reshape((-1,) + envs.single_action_space.shape)
-        batch_advantages = self.advantages.reshape(-1)
-        batch_values = self.values.rehsape(-1)
-        batch_returns = self.returns.reshape(-1)
+        batch_observations = self.observations.view(
+            (-1,) + self.single_obs_shape
+        )  # if "view(-1) does not work, use reshape()
+        batch_logprobs = self.logprobs.view(-1)
+        batch_actions = self.actions.view((-1,) + envs.single_action_space.shape)
+        batch_advantages = self.advantages.view(-1)
+        batch_values = self.values.view(-1)
+        batch_returns = self.returns.view(-1)
 
-        batch_idx = np.arange(self.args.input_size)
+        # batch_idx = np.arange(self.args.input_size)
         for epoch in range(self.args.epochs):
             # Shuffle the batch indexes to introduce additional noise and variance
-            np.random.shuffle(batch_idx)
-            for start in range(0, self.args.input_size, self.args.batch_size):
+            # np.random.shuffle(batch_idx)
+            batch_idx = np.random.choice(
+                self.args.batch_size, self.args.batch_size, replace=False
+            )
+            for start in range(0, self.args.batch_size, self.args.minibatch_size):
                 end = start + self.args.batch_size
                 minibatch_idx = batch_idx[start:end]
 
-        newAction, newLogprob, entropy, newValue = agent.get_action_and_value(
-            batch_observations[minibatch_idx], batch_actions.long()[minibatch_idx]
-        )
+                newAction, newLogprob, entropy, newValue = agent.get_action_and_value(
+                    batch_observations[minibatch_idx],
+                    batch_actions.long()[minibatch_idx],
+                )
 
-        # The probability ratio of the new policy vs the old policy
-        policy_logRatio = newLogprob - batch_logprobs[minibatch_idx]
-        policy_ratio = policy_logRatio.exp()
+                # The probability ratio of the new policy vs the old policy
+                policy_ratio = (newLogprob - batch_logprobs[minibatch_idx]).exp()
 
-        minibatch_advantages = batch_advantages[minibatch_idx]
-        # TODO: Check if minibatch_advantages need normalization or not
+                minibatch_advantages = batch_advantages[minibatch_idx]
+                # TODO: Add normalization of minibatch_advantage
 
-        pGrad_clip1 = policy_ratio * minibatch_advantages
-        pGrad_clip2 = minibatch_advantages * torch.clamp(
-            policy_ratio, 1.0 - self.args.clip_epislon, 1.0 + self.args.clip_epislon
-        )
-        # Whenever a paper writes an equation as the expected value, take the mean() of that function
-        # to imitate the expected value
-        clip_Loss = torch.min(pGrad_clip1, pGrad_clip2).mean()
+                pGrad_clip1 = policy_ratio * minibatch_advantages
+                pGrad_clip2 = minibatch_advantages * torch.clamp(
+                    policy_ratio,
+                    1.0 - self.args.clip_epislon,
+                    1.0 + self.args.clip_epislon,
+                )
+                # Whenever a paper writes an equation as the expected value, take the mean() of that function
+                # to imitate the expected value
+                clip_Loss = torch.min(pGrad_clip1, pGrad_clip2).mean()
 
-        # Computing Value Loss
-        value_loss = (
-            (1 / 2)
-            * ((newValue.view(-1) - batch_values[minibatch_idx]) ** 2).mean()
-            * self.args.coef1
-        )
+                # Computing Value Loss
+                value_loss = (
+                    (1 / 2)
+                    * ((newValue.view(-1) - batch_values[minibatch_idx]) ** 2).mean()
+                    * self.args.coef1
+                )
 
-        # Computing Entropy Loss
-        entropy_loss = entropy.mean() * self.args.coef2
+                # Computing Entropy Loss
+                entropy_loss = entropy.mean() * self.args.coef2
 
-        surrogate_loss = clip_Loss - value_loss + entropy_loss
-        self.optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm(self.agent.parameters(), self.args.max_grad_norm)
-        self.optimizer.step()
+                surrogate_loss = clip_Loss - value_loss + entropy_loss
+                self.optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm(
+                    self.agent.parameters(), self.args.max_grad_norm
+                )
+                self.optimizer.step()
 
     def seeding(self):
         random.seed(self.args.seed)
