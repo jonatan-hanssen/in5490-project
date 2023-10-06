@@ -86,7 +86,7 @@ A standard PPO algorithm with no LLM integration, as a baseline. In this case, w
 
 \subsubsection{PPO with LLM Integrated in the Policy Function}
 
-In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the probability values that the normal PPO algorithm outputs and normalized, and a new probability distribution is created, where semantically similar actions are weighted higher than others.
+In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the probability values that the normal PPO algorithm outputs and normalized, and a new probability distribution is created, where semantically similar actions are weighted higher than others. We call this the Actor-Advisor-Critic Model.
 
 \subsubsection{PPO with LLM Integrated in the Reward Function}
 
