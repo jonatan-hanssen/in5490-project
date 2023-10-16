@@ -130,25 +130,6 @@ def PPO(param_path, device="cpu"):
     _, _ = envs.reset(seed=args["seed"])
     args["rollouts"] = args["tot_steps"] // args["batch_size"]
 
-
-def checkpoint():
-    # TODO: Implement a function for saving model when the perforamce reaches a certain level.
-    # Intention is to use the "save_model(model)" method
-    raise NotImplementedError()
-
-
-def save_model(model):
-    file_path = os.path.dirname(__file__) + "/model.zip"
-    torch.save(model.state_dict(), file_path)
-
-
-def load_model(model):
-    file_path = os.path.dirname(__file__) + "/model.zip"
-    model.load_state_dict(torch.load(file_path))
-
-
-def PPO_train(envs):
-    # Containers for values needed in calculation of surrogate loss
     single_obs_shape = (
         int(np.array(envs.single_observation_space["image"].shape).prod()),
     )
@@ -172,12 +153,29 @@ def PPO_train(envs):
 
     # Episode: Moving n steps and estimating the value funvtion for each step
     for rollout in range(args["rollouts"] + 1):
-        env_episode(rollout)
-        comp_advantage(gae=args["gae"])
-        PPO_update()
+        obs, acts, logs, rews, dones, vals, adv, rets = env_episode(
+            rollout, observations, actions, logprobs, rewards, dones, values
+        )
+        PPO_update(agent, optimizer, obs, acts, logs, rews, dones, vals, adv, rets)
 
 
-def env_episode(rollout_num, agent):
+def checkpoint():
+    # TODO: Implement a function for saving model when the perforamce reaches a certain level.
+    # Intention is to use the "save_model(model)" method
+    raise NotImplementedError()
+
+
+def save_model(model):
+    file_path = os.path.dirname(__file__) + "/model.zip"
+    torch.save(model.state_dict(), file_path)
+
+
+def load_model(model):
+    file_path = os.path.dirname(__file__) + "/model.zip"
+    model.load_state_dict(torch.load(file_path))
+
+
+def env_episode(rollout_num, agent, **kwargs):
     for step in range(args["ep_steps"]):
         global_step += args["num_envs"]
         if rollout_num == 0:
@@ -201,8 +199,6 @@ def env_episode(rollout_num, agent):
             torch.Tensor(next_done).to(device),
         )
 
-
-def comp_advantage(gae=False):
     # Now that the agent(-s) has(-ve) played out an episode, it's time
     # to backtrack all steps, and compute the discounted rewards
     with torch.no_grad():
@@ -211,8 +207,8 @@ def comp_advantage(gae=False):
         if gae:
             returns = torch.zeros_like(rewards).to(device)
             # lastgaelam = 0
-            for t in reversed(range(args["num_steps"])):
-                if t == args["num_steps"] - 1:
+            for t in reversed(range(args["ep_steps"])):
+                if t == args["ep_steps"] - 1:
                     # "nextnonterminal" is a environment specific variable indicating if the
                     # agent has finished the game before reaching time step limit
                     nextnonterminal = 1.0 - next_done
@@ -249,10 +245,21 @@ def comp_advantage(gae=False):
                 )
             advantages = returns - values
 
-    return advantage
+    return observations, actions, logprobs, rewards, dones, values, advantage, returns
 
 
-def PPO_update():
+def PPO_update(
+    optimizer,
+    agent,
+    observations,
+    actions,
+    logprobs,
+    rewards,
+    dones,
+    values,
+    advantage,
+    returns,
+):
     # Optimization of the surrogate loss
 
     # Flattening all containers in order to compute components of surrogate losses

@@ -1,0 +1,18 @@
+{
+    "num_envs": 1,
+    "total_steps": 16384,
+    "seed": 42069,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "num_minibatches": 4,
+    "clip_epsilon": 0.2,
+    "value_loss_coef": 0.5,
+    "entropy_coef": 0.01,
+	"max_grad_norm" : 0.5, 
+    "env_name": "MiniGrid-UnlockPickup-v0",
+    "ep_steps": 1024,
+    "lr": 0.03,
+    "epochs": 20,
+    "rollouts": 20,
+    "rollot_steps": 256,
+}
