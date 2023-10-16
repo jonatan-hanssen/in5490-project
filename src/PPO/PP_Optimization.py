@@ -20,7 +20,7 @@ def read_params(params):
 
 
 def save_params(params):
-    file = open(params, "w")
+    file = open("hyperparams.json", "w")
     json.dump(params, file, indent=4, separators=(",", ":"))
 
 
@@ -117,7 +117,7 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(X)
 
 
-def PPO(param_path, device="cpu"):
+def PPO(param_path, device=torch.device("cpu")):
     args = read_params(param_path)
     args["batch_size"] = args["num_envs"] * args["tot_steps"]
     seeding(args["seed"])
@@ -130,16 +130,17 @@ def PPO(param_path, device="cpu"):
     _, _ = envs.reset(seed=args["seed"])
     args["rollouts"] = args["tot_steps"] // args["batch_size"]
 
-    single_obs_shape = (
-        int(np.array(envs.single_observation_space["image"].shape).prod()),
+    single_obs_shape = int(
+        np.array(envs.single_observation_space["image"].shape).prod()
     )
+    # print(envs.single_observation_space)
 
     # The following tensors need not to be initialized to again
     observations = torch.zeros(
         (args["ep_steps"], args["num_envs"], single_obs_shape),
     ).to(device)
     actions = torch.zeros(
-        (args["ep_steps"], args["num_envs"]) + envs.single_action_space
+        (args["ep_steps"], args["num_envs"]) + envs.single_action_space.shape
     ).to(device)
     # The ActorCritic Network outputs log probabilities
     logprobs = torch.zeros((args["ep_steps"], args["num_envs"])).to(device)
@@ -154,9 +155,19 @@ def PPO(param_path, device="cpu"):
     # Episode: Moving n steps and estimating the value funvtion for each step
     for rollout in range(args["rollouts"] + 1):
         obs, acts, logs, rews, dones, vals, adv, rets = env_episode(
-            rollout, observations, actions, logprobs, rewards, dones, values
+            agent,
+            args,
+            device,
+            envs,
+            rollout,
+            observations,
+            actions,
+            logprobs,
+            rewards,
+            dones,
+            values,
         )
-        PPO_update(agent, optimizer, obs, acts, logs, rews, dones, vals, adv, rets)
+        PPO_update(optimizer, agent, device, obs, acts, logs, rews, dones, vals, adv, rets)
 
 
 def checkpoint():
@@ -175,27 +186,45 @@ def load_model(model):
     model.load_state_dict(torch.load(file_path))
 
 
-def env_episode(rollout_num, agent, **kwargs):
+def env_episode(
+    agent,
+    args,
+    device,
+    envs,
+    rollout_num,
+    observations,
+    actions,
+    logprobs,
+    rewards,
+    dones,
+    values,
+    gae=True
+):
     for step in range(args["ep_steps"]):
-        global_step += args["num_envs"]
+        # global_step += args["num_envs"]
         if rollout_num == 0:
-            observations[step] = torch.zeros(envs.reset()[0]).to(device)
-            dones[step] = torch.zeros(args["num_envs"]).to(device)
+            # print(envs.reset()[0]["image"].flatten())
+            next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(device)
+            next_done = torch.zeros(args["num_envs"]).to(device) 
+
+        observations[step] = next_observation
+        dones[step] = next_done
 
         with torch.no_grad():
             action, logprob, _, value = agent.get_action_and_value(next_observation)
+            # print(np.array([action.cpu().numpy()]))
             values[step] = value.flatten()
         actions[step] = action
         logprobs[step] = logprob
-
-        next_observation, reward, done, truncated, info = envs.step(
-            action.cpu().numpy()
-        )
+        
+        next_observation, reward, done, truncated, info = envs.step(np.array([action.cpu().numpy()]))
         # Converting to tensor and transfering to gpu for faster computation
         rewards[step] = torch.Tensor(reward).to(device).view(-1)
 
+        # print(next_observation["image"])
+
         next_observation, next_done = (
-            torch.Tensor(next_observation).to(device),
+            torch.Tensor(next_observation["image"].flatten()).to(device),
             torch.Tensor(next_done).to(device),
         )
 
@@ -251,6 +280,7 @@ def env_episode(rollout_num, agent, **kwargs):
 def PPO_update(
     optimizer,
     agent,
+    device,
     observations,
     actions,
     logprobs,
@@ -328,6 +358,24 @@ def seeding(seed):
 
 
 if __name__ == "__main__":
-    print("The Main function")
-
-    # read_params()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    params = {
+        "num_envs": 1,
+        "tot_steps": 16384,
+        "seed": 42069,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "num_minibatches": 4,
+        "clip_epsilon": 0.2,
+        "value_loss_coef": 0.5,
+        "entropy_coef": 0.01,
+        "max_grad_norm": 0.5,
+        "env_name": "MiniGrid-UnlockPickup-v0",
+        "ep_steps": 1024,
+        "lr": 0.03,
+        "epochs": 20,
+        "rollouts": 20,
+        "rollot_steps": 256,
+    }
+    save_params(params)
+    PPO("hyperparams.json", device)
