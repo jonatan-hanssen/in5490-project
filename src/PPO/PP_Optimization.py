@@ -119,7 +119,8 @@ class Agent(nn.Module):
 
 def PPO(param_path, device=torch.device("cpu")):
     args = read_params(param_path)
-    args["batch_size"] = args["num_envs"] * args["tot_steps"]
+    args["batch_size"] = int(args["num_envs"] * args["ep_steps"])
+    args["minibatch_size"] = int(args["batch_size"] // args["num_minibatches"])
     seeding(args["seed"])
     seeds = [random.randint(0, 20000) for _ in range(args["num_envs"])]
     envs = gym.vector.SyncVectorEnv(
@@ -128,7 +129,7 @@ def PPO(param_path, device=torch.device("cpu")):
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args["lr"], eps=1e-5)
     _, _ = envs.reset(seed=args["seed"])
-    args["rollouts"] = args["tot_steps"] // args["batch_size"]
+    args["rollouts"] = int(args["tot_steps"] // args["batch_size"])
 
     single_obs_shape = int(
         np.array(envs.single_observation_space["image"].shape).prod()
@@ -167,7 +168,21 @@ def PPO(param_path, device=torch.device("cpu")):
             dones,
             values,
         )
-        PPO_update(optimizer, agent, device, obs, acts, logs, rews, dones, vals, adv, rets)
+        PPO_update(
+            optimizer,
+            agent,
+            device,
+            envs,
+            args,
+            obs,
+            acts,
+            logs,
+            rews,
+            dones,
+            vals,
+            adv,
+            rets,
+        )
 
 
 def checkpoint():
@@ -198,14 +213,16 @@ def env_episode(
     rewards,
     dones,
     values,
-    gae=True
+    gae=True,
 ):
     for step in range(args["ep_steps"]):
         # global_step += args["num_envs"]
         if rollout_num == 0:
             # print(envs.reset()[0]["image"].flatten())
-            next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(device)
-            next_done = torch.zeros(args["num_envs"]).to(device) 
+            next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(
+                device
+            )
+            next_done = torch.zeros(args["num_envs"]).to(device)
 
         observations[step] = next_observation
         dones[step] = next_done
@@ -216,8 +233,10 @@ def env_episode(
             values[step] = value.flatten()
         actions[step] = action
         logprobs[step] = logprob
-        
-        next_observation, reward, done, truncated, info = envs.step(np.array([action.cpu().numpy()]))
+
+        next_observation, reward, done, truncated, info = envs.step(
+            np.array([action.cpu().numpy()])
+        )
         # Converting to tensor and transfering to gpu for faster computation
         rewards[step] = torch.Tensor(reward).to(device).view(-1)
 
@@ -241,13 +260,16 @@ def env_episode(
                     # "nextnonterminal" is a environment specific variable indicating if the
                     # agent has finished the game before reaching time step limit
                     nextnonterminal = 1.0 - next_done
-                    nextvalues = next_value
+                    next_values = next_value
+                    last_gae_lam = 0
                 else:
                     nextnonterminal = 1.0 - dones[t + 1]
+                    next_values = values[t + 1]
+                    last_gae_lam = returns[t + 1]
 
                 delta = (
                     rewards[t]
-                    + args["gamma"] * values[t + 1] * nextnonterminal
+                    + args["gamma"] * next_values * nextnonterminal
                     - values[t]
                 )
                 returns[t] = (
@@ -255,7 +277,7 @@ def env_episode(
                     + args["gamma"]
                     * args["gae_lambda"]
                     * nextnonterminal
-                    * returns[t + 1]
+                    * last_gae_lam
                 )
             advantages = returns - values
             # Standard advantage estimation of General Advantage Estimation
@@ -274,49 +296,57 @@ def env_episode(
                 )
             advantages = returns - values
 
-    return observations, actions, logprobs, rewards, dones, values, advantage, returns
+    return observations, actions, logprobs, rewards, dones, values, advantages, returns
 
 
 def PPO_update(
     optimizer,
     agent,
     device,
+    envs,
+    args,
     observations,
     actions,
     logprobs,
     rewards,
     dones,
     values,
-    advantage,
+    advantages,
     returns,
 ):
+    single_obs_shape = int(
+        np.array(envs.single_observation_space["image"].shape).prod()
+    )
     # Optimization of the surrogate loss
 
     # Flattening all containers in order to compute components of surrogate losses
     # using minibatches
     batch_observations = observations.view(
-        (-1,) + single_obs_shape
+        (-1, single_obs_shape)
     )  # if "view(-1) does not work, use reshape()
-    batch_logprobs = logprobs.view(-1)
-    batch_actions = actions.view((-1,) + envs.single_action_space.shape)
-    batch_advantages = advantages.view(-1)
-    batch_values = values.view(-1)
-    batch_returns = returns.view(-1)
+    batch_logprobs = logprobs.reshape(-1)
+    batch_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+    batch_advantages = advantages.reshape(-1)
+    batch_values = values.reshape(-1)
+    batch_returns = returns.reshape(-1)
 
-    # batch_idx = np.arange(.args.input_size)
+    batch_idx = np.arange(args["batch_size"])
     for epoch in range(args["epochs"]):
+        np.random.shuffle(batch_idx)
         # NOTE this shuffles but in a greeeg way
-        batch_idx = np.random.choice(
-            args["batch_size"], args["batch_size"], replace=False
-        )
+        # batch_idx = np.random.choice(
+        #     args["batch_size"], args["batch_size"], replace=False
+        # )
         for start in range(0, args["batch_size"], args["minibatch_size"]):
             end = min(start + args["minibatch_size"], args["batch_size"])
+            print(args["minibatch_size"])
+            print(end)
+            print(batch_logprobs.shape)
+            end = start + args["minibatch_size"]
             minibatch_idx = batch_idx[start:end]
+            # print(minibatch_idx)
 
-            _, new_logprob, entropy, new_value = agent.get_action_and_value(
-                batch_observations[minibatch_idx],
-                batch_actions.long()[minibatch_idx],
-            )
+            _, new_logprob, entropy, new_value = agent.get_action_and_value(batch_observations[minibatch_idx], batch_actions[minibatch_idx])
 
             # The probability ratio of the new policy vs the old policy
             # this is equivalent to prob / prob_old
