@@ -25,8 +25,10 @@ def save_params(params):
     json.dump(params, file, indent=4, separators=(",", ":"))
 
 
-def sample_minibatches():
-    pass
+def minibatch_generator():
+    batch_idx = np.random.choice(args["batch_size"], args["batch_size"], replace=False)
+    for start in range(0, args["batch_size"], args["minibatch_size"]):
+        end = start + args["minibatch_size"]
 
 
 def init_weightsNbias(layer, std=np.sqrt(2), bias_const=0.0):
@@ -70,9 +72,9 @@ class Agent(nn.Module):
         the agent is in.
     """
 
-    def __init__(, envs):
-        super(Agent, ).__init__()
-        .critic = nn.Sequential(
+    def __init__(self, envs):
+        super(Agent, self).__init__()
+        self.critic = nn.Sequential(
             init_weightsNbias(
                 nn.Linear(
                     np.array(
@@ -87,7 +89,7 @@ class Agent(nn.Module):
             init_weightsNbias(nn.Linear(64, 1), std=1.0),
         )
 
-        .actor = nn.Sequential(
+        self.actor = nn.Sequential(
             init_weightsNbias(
                 nn.Linear(
                     np.array(
@@ -105,15 +107,15 @@ class Agent(nn.Module):
         # Yet to be integrated -> shall serve as the second actor
         # .LM_actor = llama2_7b_policy()
 
-    def get_value(, X):
-        return .critic(X)
+    def get_value(self, X):
+        return self.critic(X)
 
-    def get_action_and_value(, X, action=None):
-        logits = .actor(X)
+    def get_action_and_value(self, X, action=None):
+        logits = self.actor(X)
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), .critic(X)
+        return action, probs.log_prob(action), probs.entropy(), self.critic(X)
 
 
 def PPO(param_path):
@@ -127,6 +129,11 @@ def PPO(param_path):
     optimizer = optim.Adam(agent.parameters(), lr=args.lr, eps=1e-5)
     _, _ = envs.reset(seed=args["seed"])
     args["rollouts"] = args["tot_steps"] // args["batch_size"]
+
+def checkpoint():
+    # TODO: Implement a function for saving model when the perforamce reaches a certain level.
+    # Intention is to use the "save_model(model)" method
+    raise NotImplementedError()
 
 
 def save_model(model):
@@ -144,7 +151,8 @@ def PPO_train(envs):
     single_obs_shape = (
         int(np.array(envs.single_observation_space["image"].shape).prod()),
     )
-
+    
+    # The following tensors need not to be initialized to again
     observations = torch.zeros(
         (args["ep_steps"], args["num_envs"], single_obs_shape),
     ).to(device)
@@ -243,30 +251,30 @@ def comp_advantage(gae=False):
             advantages = returns - values
 
 
-def backward():
+def PPO_update():
     # Optimization of the surrogate loss
 
     # Flattening all containers in order to compute components of surrogate losses
     # using minibatches
-    batch_observations = .observations.view(
-        (-1,) + .single_obs_shape
+    batch_observations = observations.view(
+        (-1,) + single_obs_shape
     )  # if "view(-1) does not work, use reshape()
-    batch_logprobs = .logprobs.view(-1)
-    batch_actions = .actions.view((-1,) + envs.single_action_space.shape)
-    batch_advantages = .advantages.view(-1)
-    batch_values = .values.view(-1)
-    batch_returns = .returns.view(-1)
+    batch_logprobs = logprobs.view(-1)
+    batch_actions = actions.view((-1,) + envs.single_action_space.shape)
+    batch_advantages = advantages.view(-1)
+    batch_values = values.view(-1)
+    batch_returns = returns.view(-1)
 
     # batch_idx = np.arange(.args.input_size)
-    for epoch in range(.args.epochs):
+    for epoch in range(args["epochs"]):
         # Shuffle the batch indexes to introduce additional noise and variance
         # np.random.shuffle(batch_idx)
         # TODO: Implement a minibatch generator here -> Gregz
         batch_idx = np.random.choice(
             args["batch_size"], args["batch_size"], replace=False
         )
-        for start in range(0, args["batch_size"], args.["minibatch_size"]):
-            end = start + args["batch_size"]
+        for start in range(0, args["batch_size"], args["minibatch_size"]):
+            end = start + args["minibatch_size"]
             minibatch_idx = batch_idx[start:end]
 
             newAction, newLogprob, entropy, newValue = agent.get_action_and_value(
