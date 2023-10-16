@@ -2,7 +2,6 @@ import argparse
 import os
 from distutils.util import strtobool
 import time
-from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import random
 import torch
@@ -13,15 +12,15 @@ from torch.distributions.categorical import Categorical
 import json
 
 
-def read_params():
-    file = open("hyperparams.json")
+def read_params(params):
+    file = open(params)
     params = json.load(file)
     # print(json.dumps(params, indent=4, separators=(":", ",")))
     return params
 
 
 def save_params(params):
-    file = open("hyperparams.json", "w")
+    file = open(params, "w")
     json.dump(params, file, indent=4, separators=(",", ":"))
 
 
@@ -118,17 +117,19 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(X)
 
 
-def PPO(param_path):
-    args = read_params()
-    seeding()
-    seeds = [random.randint(0, 20000) for _ in range(args["env_n"])]
-    envs = gym.vector.SyncVector(
-        [make_env(env_name, seeds[i]) for i in range(args["num_envs"])]
+def PPO(param_path, device="cpu"):
+    args = read_params(param_path)
+    args["batch_size"] = args["num_envs"] * args["tot_steps"]
+    seeding(args["seed"])
+    seeds = [random.randint(0, 20000) for _ in range(args["num_envs"])]
+    envs = gym.vector.SyncVectorEnv(
+        [make_env(args["env_name"], seeds[i]) for i in range(args["num_envs"])]
     )
     agent = Agent(envs).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=args.lr, eps=1e-5)
+    optimizer = optim.Adam(agent.parameters(), lr=args["lr"], eps=1e-5)
     _, _ = envs.reset(seed=args["seed"])
     args["rollouts"] = args["tot_steps"] // args["batch_size"]
+
 
 def checkpoint():
     # TODO: Implement a function for saving model when the perforamce reaches a certain level.
@@ -151,7 +152,7 @@ def PPO_train(envs):
     single_obs_shape = (
         int(np.array(envs.single_observation_space["image"].shape).prod()),
     )
-    
+
     # The following tensors need not to be initialized to again
     observations = torch.zeros(
         (args["ep_steps"], args["num_envs"], single_obs_shape),
@@ -200,6 +201,7 @@ def env_episode(rollout_num, agent):
             torch.Tensor(next_done).to(device),
         )
 
+
 def comp_advantage(gae=False):
     # Now that the agent(-s) has(-ve) played out an episode, it's time
     # to backtrack all steps, and compute the discounted rewards
@@ -230,7 +232,7 @@ def comp_advantage(gae=False):
                     * nextnonterminal
                     * returns[t + 1]
                 )
-            advantages = ret  values
+            advantages = returns - values
             # Standard advantage estimation of General Advantage Estimation
             # proposed by the authors of PPO is not used
         else:
@@ -243,12 +245,11 @@ def comp_advantage(gae=False):
                     nextnonterminal = 1.0 - dones[t + 1]
 
                 returns[t] = (
-                    rewards[t]
-                    * args["gamma"]
-                    * nextnonterminal
-                    * returns[t + 1]
+                    rewards[t] * args["gamma"] * nextnonterminal * returns[t + 1]
                 )
             advantages = returns - values
+
+    return advantage
 
 
 def PPO_update():
@@ -267,64 +268,59 @@ def PPO_update():
 
     # batch_idx = np.arange(.args.input_size)
     for epoch in range(args["epochs"]):
-        # Shuffle the batch indexes to introduce additional noise and variance
-        # np.random.shuffle(batch_idx)
-        # TODO: Implement a minibatch generator here -> Gregz
+        # NOTE this shuffles but in a greeeg way
         batch_idx = np.random.choice(
             args["batch_size"], args["batch_size"], replace=False
         )
         for start in range(0, args["batch_size"], args["minibatch_size"]):
-            end = start + args["minibatch_size"]
+            end = min(start + args["minibatch_size"], args["batch_size"])
             minibatch_idx = batch_idx[start:end]
 
-            newAction, newLogprob, entropy, newValue = agent.get_action_and_value(
+            _, new_logprob, entropy, new_value = agent.get_action_and_value(
                 batch_observations[minibatch_idx],
                 batch_actions.long()[minibatch_idx],
             )
 
             # The probability ratio of the new policy vs the old policy
-            policy_ratio = (newLogprob - batch_logprobs[minibatch_idx]).exp()
+            # this is equivalent to prob / prob_old
+            policy_ratio = (new_logprob - batch_logprobs[minibatch_idx]).exp()
 
             minibatch_advantages = batch_advantages[minibatch_idx]
             # TODO: Add normalization of minibatch_advantage
 
-            pGrad_clip1 = policy_ratio * minibatch_advantages
-            pGrad_clip2 = minibatch_advantages * torch.clamp(
+            p_grad_clip1 = policy_ratio * minibatch_advantages
+            p_grad_clip2 = minibatch_advantages * torch.clamp(
                 policy_ratio,
-                1.0 - args["clip_epislon"],
-                1.0 + args["clip_epislon"],
+                1.0 - args["clip_epsilon"],
+                1.0 + args["clip_epsilon"],
             )
             # Whenever a paper writes an equation as the expected value, take the mean() of that function
             # to imitate the expected value
-            clip_Loss = torch.min(pGrad_clip1, pGrad_clip2).mean()
+            clip_loss = torch.min(p_grad_clip1, p_grad_clip2).mean()
 
             # Computing Value Loss
             value_loss = (
-                (1 / 2)
-                * ((newValue.view(-1) - batch_values[minibatch_idx]) ** 2).mean()
-                * args["coef1"]
-            )
+                (new_value.view(-1) - batch_returns[minibatch_idx]) ** 2
+            ).mean() * args["coef1"]
 
             # Computing Entropy Loss
             entropy_loss = entropy.mean() * args["coef2"]
 
-            surrogate_loss = clip_Loss - value_loss + entropy_loss
+            surrogate_loss = clip_loss - value_loss + entropy_loss
             optimizer.zero_grad()
             loss.backward()
-            nn.utils.clip_grad_norm(
-                agent.parameters(), args["max_grad_norm"]
-            )
-            .optimizer.step()
+            nn.utils.clip_grad_norm(agent.parameters(), args["max_grad_norm"])
+            optimizer.step()
 
-def seeding():
-    random.seed(.args.seed)
-    np.random.seed(.args.seed)
-    torch.manual_seed(.args.seed)
+
+def seeding(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 if __name__ == "__main__":
     print("The Main function")
 
-    read_params()
+    # read_params()
