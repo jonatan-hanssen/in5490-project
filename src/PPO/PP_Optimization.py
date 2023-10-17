@@ -82,9 +82,10 @@ class Agent(nn.Module):
                     64,
                 )
             ),
-            nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, 64)),
-            nn.Tanh(),
+            # nn.ReLU(),
+            # init_weightsNbias(nn.Linear(64, 64)),
+            # nn.Tanh(),
+            nn.ReLU(),
             init_weightsNbias(nn.Linear(64, 1), std=1.0),
         )
 
@@ -97,9 +98,10 @@ class Agent(nn.Module):
                     64,
                 )
             ),
-            nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, 64)),
-            nn.Tanh(),
+            # nn.ReLU(),
+            # init_weightsNbias(nn.Linear(64, 64)),
+            # nn.Tanh(),
+            nn.ReLU(),
             init_weightsNbias(nn.Linear(64, envs.single_action_space.n), std=0.01),
         )
 
@@ -128,7 +130,7 @@ def PPO(param_path, device=torch.device("cpu")):
     )
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args["lr"], eps=1e-5)
-    _, _ = envs.reset(seed=args["seed"])
+    # _, _ = envs.reset(seed=args["seed"])
     args["rollouts"] = int(args["tot_steps"] // args["batch_size"])
 
     single_obs_shape = int(
@@ -150,16 +152,31 @@ def PPO(param_path, device=torch.device("cpu")):
     values = torch.zeros((args["ep_steps"], args["num_envs"])).to(device)
 
     # Initializing the next step
-    # next_observation = torch.zeros(.envs.reset()[0]).to(device)
+    next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(device)
+    next_done = torch.zeros(args["num_envs"]).to(device)
     # next_done = torch.zeros(.args.num_envs).to(device)
 
     # Episode: Moving n steps and estimating the value funvtion for each step
     for rollout in range(args["rollouts"] + 1):
-        obs, acts, logs, rews, dones, vals, adv, rets = env_episode(
+        print(f"Rollout num: {rollout}")
+        (
+            obs,
+            acts,
+            logs,
+            rews,
+            dones,
+            vals,
+            adv,
+            rets,
+            next_observation,
+            next_done,
+        ) = env_episode(
             agent,
             args,
             device,
             envs,
+            next_observation,
+            next_done,
             rollout,
             observations,
             actions,
@@ -168,6 +185,7 @@ def PPO(param_path, device=torch.device("cpu")):
             dones,
             values,
         )
+        print(f"Sum of rewards per episode: {torch.sum(rewards)}")
         PPO_update(
             optimizer,
             agent,
@@ -206,6 +224,8 @@ def env_episode(
     args,
     device,
     envs,
+    next_observation,
+    next_done,
     rollout_num,
     observations,
     actions,
@@ -217,13 +237,13 @@ def env_episode(
 ):
     for step in range(args["ep_steps"]):
         # global_step += args["num_envs"]
-        if rollout_num == 0:
-            # print(envs.reset()[0]["image"].flatten())
-            next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(
-                device
-            )
-            next_done = torch.zeros(args["num_envs"]).to(device)
-
+        # if rollout_num == 0:
+        # print(envs.reset()[0]["image"].flatten())
+        # next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(
+        #     device
+        # )
+        # next_done = torch.zeros(args["num_envs"]).to(device)
+        # print(next_observation)
         observations[step] = next_observation
         dones[step] = next_done
 
@@ -254,7 +274,6 @@ def env_episode(
         # General advanatage estimation proposed in the original paper on PPO
         if gae:
             returns = torch.zeros_like(rewards).to(device)
-            # lastgaelam = 0
             for t in reversed(range(args["ep_steps"])):
                 if t == args["ep_steps"] - 1:
                     # "nextnonterminal" is a environment specific variable indicating if the
@@ -280,8 +299,6 @@ def env_episode(
                     * last_gae_lam
                 )
             advantages = returns - values
-            # Standard advantage estimation of General Advantage Estimation
-            # proposed by the authors of PPO is not used
         else:
             returns = torch.zeros_like(rewards).to(device)
             for t in reversed(range(args.num_steps)):
@@ -296,7 +313,18 @@ def env_episode(
                 )
             advantages = returns - values
 
-    return observations, actions, logprobs, rewards, dones, values, advantages, returns
+    return (
+        observations,
+        actions,
+        logprobs,
+        rewards,
+        dones,
+        values,
+        advantages,
+        returns,
+        next_observation,
+        next_done,
+    )
 
 
 def PPO_update(
@@ -323,37 +351,35 @@ def PPO_update(
     # using minibatches
     batch_observations = observations.view(
         (-1, single_obs_shape)
-    )  # if "view(-1) does not work, use reshape()
-    batch_logprobs = logprobs.reshape(-1)
-    batch_actions = actions.reshape((-1,) + envs.single_action_space.shape)
-    batch_advantages = advantages.reshape(-1)
-    batch_values = values.reshape(-1)
-    batch_returns = returns.reshape(-1)
+    )  
+    batch_logprobs = logprobs.view(-1)
+    batch_actions = actions.view((-1,) + envs.single_action_space.shape)
+    batch_advantages = advantages.view(-1)
+    batch_values = values.view(-1)
+    batch_returns = returns.view(-1)
 
-    batch_idx = np.arange(args["batch_size"])
+    # batch_idx = np.arange(args["batch_size"])
     for epoch in range(args["epochs"]):
-        np.random.shuffle(batch_idx)
+        # np.random.shuffle(batch_idx)
         # NOTE this shuffles but in a greeeg way
-        # batch_idx = np.random.choice(
-        #     args["batch_size"], args["batch_size"], replace=False
-        # )
+        batch_idx = np.random.choice(
+            args["batch_size"], args["batch_size"], replace=False
+        )
         for start in range(0, args["batch_size"], args["minibatch_size"]):
             end = min(start + args["minibatch_size"], args["batch_size"])
-            print(args["minibatch_size"])
-            print(end)
-            print(batch_logprobs.shape)
             end = start + args["minibatch_size"]
             minibatch_idx = batch_idx[start:end]
             # print(minibatch_idx)
 
-            _, new_logprob, entropy, new_value = agent.get_action_and_value(batch_observations[minibatch_idx], batch_actions[minibatch_idx])
+            _, new_logprob, entropy, new_value = agent.get_action_and_value(
+                batch_observations[minibatch_idx], batch_actions[minibatch_idx]
+            )
 
             # The probability ratio of the new policy vs the old policy
             # this is equivalent to prob / prob_old
-            policy_ratio = (new_logprob - batch_logprobs[minibatch_idx]).exp()
+            policy_ratio = (new_logprob - batch_logprobs.long()[minibatch_idx]).exp()
 
             minibatch_advantages = batch_advantages[minibatch_idx]
-            # TODO: Add normalization of minibatch_advantage
 
             p_grad_clip1 = policy_ratio * minibatch_advantages
             p_grad_clip2 = minibatch_advantages * torch.clamp(
@@ -368,14 +394,14 @@ def PPO_update(
             # Computing Value Loss
             value_loss = (
                 (new_value.view(-1) - batch_returns[minibatch_idx]) ** 2
-            ).mean() * args["coef1"]
+            ).mean() * args["value_loss_coef"]
 
-            # Computing Entropy Loss
-            entropy_loss = entropy.mean() * args["coef2"]
+            # Computing expected value of Entropy Loss
+            entropy_loss = entropy.mean() * args["entropy_coef"]
 
             surrogate_loss = clip_loss - value_loss + entropy_loss
             optimizer.zero_grad()
-            loss.backward()
+            surrogate_loss.backward()
             nn.utils.clip_grad_norm(agent.parameters(), args["max_grad_norm"])
             optimizer.step()
 
@@ -389,23 +415,6 @@ def seeding(seed):
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    params = {
-        "num_envs": 1,
-        "tot_steps": 16384,
-        "seed": 42069,
-        "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "num_minibatches": 4,
-        "clip_epsilon": 0.2,
-        "value_loss_coef": 0.5,
-        "entropy_coef": 0.01,
-        "max_grad_norm": 0.5,
-        "env_name": "MiniGrid-UnlockPickup-v0",
-        "ep_steps": 1024,
-        "lr": 0.03,
-        "epochs": 20,
-        "rollouts": 20,
-        "rollot_steps": 256,
-    }
-    save_params(params)
+ 
+    # save_params(params)
     PPO("hyperparams.json", device)
