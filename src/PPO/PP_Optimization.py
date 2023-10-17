@@ -27,11 +27,11 @@ class PPO:
             ]
         )
 
-        self.agent = Agent(self.envs)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.agent = Agent(self.envs).to(self.device)
         self.optimizer = optim.Adam(
             self.agent.parameters(), lr=self.args["lr"], eps=1e-5
         )
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.single_obs_shape = int(
             np.array(self.envs.single_observation_space["image"].shape).prod()
         )
@@ -88,13 +88,6 @@ class PPO:
         """
         for step in range(self.args["ep_steps"]):
             # global_step += args["num_envs"]
-            # if rollout_num == 0:
-            # print(envs.reset()[0]["image"].flatten())
-            # next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(
-            #     device
-            # )
-            # next_done = torch.zeros(args["num_envs"]).to(device)
-            # print(next_observation)
             self.observations[step] = next_observation
             self.dones[step] = next_done
 
@@ -102,7 +95,6 @@ class PPO:
                 action, logprob, _, value = self.agent.get_action_and_value(
                     next_observation
                 )
-                # print(np.array([action.cpu().numpy()]))
                 self.values[step] = value.flatten()
             self.actions[step] = action
             self.logprobs[step] = logprob
@@ -176,12 +168,19 @@ class PPO:
         When next_episode is called, this will have new values because the self values will be changed
         """
         b_obs = self.observations.view((-1, self.single_obs_shape))
-        b_logs = self.logprobs.view(-1)
-        print(self.envs.single_action_space.shape)
-        b_acts = self.actions.view((-1, self.envs.single_action_space))
-        b_advs = self.advantages.view(-1)
-        b_vals = self.values.view(-1)
-        b_rets = self.returns.view(-1)
+        b_logs = self.logprobs.view(
+            -1,
+        )
+        b_acts = self.actions.view((-1,) + self.envs.single_action_space.shape)
+        b_advs = self.advantages.view(
+            -1,
+        )
+        b_vals = self.values.view(
+            -1,
+        )
+        b_rets = self.returns.view(
+            -1,
+        )
 
         batch_idxs = np.random.choice(
             self.args["batch_size"], self.args["batch_size"], replace=False
@@ -252,9 +251,9 @@ class PPO:
 
                 surrogate_loss = clip_loss - value_loss + entropy_loss
 
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 surrogate_loss.backward()
-                optimizer.step()
+                self.optimizer.step()
 
 
 if __name__ == "__main__":
