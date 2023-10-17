@@ -1,13 +1,7 @@
-import argparse
 import os
-from distutils.util import strtobool
-import time
-
 # from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-import random
 import torch
-import gymnasium as gym
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
@@ -28,24 +22,29 @@ def init_weightsNbias(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-def make_env(env_name, seed):
-    def env_gen():
-        env = gym.make(env_name, render_mode="rgb_array")
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        env.action_space.seed(seed)
-        env.observation_space.seed(seed)
-        return env
-
-    return env_gen
+def save_model(model):
+    file_path = os.path.dirname(__file__) + "/model.zip"
+    torch.save(model.state_dict(), file_path)
 
 
+def load_model(model):
+    file_path = os.path.dirname(__file__) + "/model.zip"
+    model.load_state_dict(torch.load(file_path))
+
+
+def checkpoint():
+    # TODO: Implement a function for saving model when the perforamce reaches a certain level.
+    # Intention is to use the "save_model(model)" method
+    raise NotImplementedError()
+
+
+# TODO: Transfer model to device a.k.a. to GPU
 class Agent(nn.Module):
     """
     Descr:
         The agents task is to decide the next action to perform, and evaluate the
         possible future rewards, a.k.a. the value function, based on the current state
-        the agent is in. In our case the agents chooses the
-
+        the agent is in.
     """
 
     def __init__(self, envs):
@@ -53,26 +52,37 @@ class Agent(nn.Module):
         self.critic = nn.Sequential(
             init_weightsNbias(
                 nn.Linear(
-                    np.array(envs.single_observation_space["image"].shape).prod(), 64
+                    np.array(
+                        np.array(envs.single_observation_space["image"].shape)
+                    ).prod(),
+                    64,
                 )
             ),
-            nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, 64)),
-            nn.Tanh(),
+            # nn.ReLU(),
+            # init_weightsNbias(nn.Linear(64, 64)),
+            # nn.Tanh(),
+            nn.ReLU(),
             init_weightsNbias(nn.Linear(64, 1), std=1.0),
         )
 
         self.actor = nn.Sequential(
             init_weightsNbias(
                 nn.Linear(
-                    np.array(envs.single_observation_space["image"].shape).prod(), 64
+                    np.array(
+                        np.array(envs.single_observation_space["image"].shape)
+                    ).prod(),
+                    64,
                 )
             ),
-            nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, 64)),
-            nn.Tanh(),
+            # nn.ReLU(),
+            # init_weightsNbias(nn.Linear(64, 64)),
+            # nn.Tanh(),
+            nn.ReLU(),
             init_weightsNbias(nn.Linear(64, envs.single_action_space.n), std=0.01),
         )
+
+        # Yet to be integrated -> shall serve as the second actor
+        # .LM_actor = llama2_7b_policy()
 
     def get_value(self, X):
         return self.critic(X)
@@ -85,28 +95,3 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(X)
 
 
-if __name__ == "__main__":
-    envs = gym.vector.SyncVectorEnv([make_env("MiniGrid-UnlockPickup-v0", 42)])
-    # print(envs.observation_space)
-    # print(envs.single_observation_space)
-    # print(envs.observation_space["image"])
-    # print(np.array((envs.single_observation_space["image"]).shape).prod())
-    # print(envs.single_action_space.n)
-    # observation, info = envs.reset(seed=42)
-    # print(observation["image"])
-    # print(observation.transpose(2,0,1))
-    agent = Agent(envs)
-    # print(agent.state_dict())
-    # src_dir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-    src_dir = os.path.dirname(__file__)
-
-    torch.save(agent.state_dict(), src_dir + "/PPO.txt")
-
-    model = Agent(envs)
-    model.load_state_dict(torch.load(src_dir + "/PPO.txt"))
-    
-    # next_observation = torch.Tensor(envs.reset()[0])
-
-
-    # action, _, _, _ = agent.get_action_and_value(next_observation)
-    # print(action)

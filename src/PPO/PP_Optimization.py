@@ -9,114 +9,15 @@ import gymnasium as gym
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
+from ActorCritic import *
+from utils import *
 import json
-
-
-def read_params(params):
-    file = open(params)
-    params = json.load(file)
-    # print(json.dumps(params, indent=4, separators=(":", ",")))
-    return params
-
-
-def save_params(params):
-    file = open("hyperparams.json", "w")
-    json.dump(params, file, indent=4, separators=(",", ":"))
 
 
 def minibatch_generator():
     batch_idx = np.random.choice(args["batch_size"], args["batch_size"], replace=False)
     for start in range(0, args["batch_size"], args["minibatch_size"]):
         end = start + args["minibatch_size"]
-
-
-def init_weightsNbias(layer, std=np.sqrt(2), bias_const=0.0):
-    """
-    Descr:
-        Most, if not all implementations of PPO seen so far use the approach
-        of initializing weights orthogonaly. According to both the authors behind
-        Proximal Policy Optimization, and the paper by title "Exact solutions to
-        the nonlinear dynamics of learning in deep learning networks", the approach
-        of creating such initial conditions leads to faithful propagation of gradients,
-        and better convergence (See page 2 of the latter paper).
-    """
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
-    return layer
-
-
-def make_env(env_name, seed):
-    """
-    Descr:
-        Returns a "vectorized" environenment, meaning that it is wrapped in a gymnasium vector, allowing for
-        some aditional functionality, such as parallel training of many environments.
-    """
-
-    def env_gen():
-        env = gym.make(env_name, render_mode="rgb_array")
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        env.action_space.seed(seed)
-        env.observation_space.seed(seed)
-        return env
-
-    return env_gen
-
-
-# TODO: Transfer model to device a.k.a. to GPU
-class Agent(nn.Module):
-    """
-    Descr:
-        The agents task is to decide the next action to perform, and evaluate the
-        possible future rewards, a.k.a. the value function, based on the current state
-        the agent is in.
-    """
-
-    def __init__(self, envs):
-        super(Agent, self).__init__()
-        self.critic = nn.Sequential(
-            init_weightsNbias(
-                nn.Linear(
-                    np.array(
-                        np.array(envs.single_observation_space["image"].shape)
-                    ).prod(),
-                    64,
-                )
-            ),
-            # nn.ReLU(),
-            # init_weightsNbias(nn.Linear(64, 64)),
-            # nn.Tanh(),
-            nn.ReLU(),
-            init_weightsNbias(nn.Linear(64, 1), std=1.0),
-        )
-
-        self.actor = nn.Sequential(
-            init_weightsNbias(
-                nn.Linear(
-                    np.array(
-                        np.array(envs.single_observation_space["image"].shape)
-                    ).prod(),
-                    64,
-                )
-            ),
-            # nn.ReLU(),
-            # init_weightsNbias(nn.Linear(64, 64)),
-            # nn.Tanh(),
-            nn.ReLU(),
-            init_weightsNbias(nn.Linear(64, envs.single_action_space.n), std=0.01),
-        )
-
-        # Yet to be integrated -> shall serve as the second actor
-        # .LM_actor = llama2_7b_policy()
-
-    def get_value(self, X):
-        return self.critic(X)
-
-    def get_action_and_value(self, X, action=None):
-        logits = self.actor(X)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(X)
 
 
 def PPO(param_path, device=torch.device("cpu")):
@@ -201,22 +102,6 @@ def PPO(param_path, device=torch.device("cpu")):
             adv,
             rets,
         )
-
-
-def checkpoint():
-    # TODO: Implement a function for saving model when the perforamce reaches a certain level.
-    # Intention is to use the "save_model(model)" method
-    raise NotImplementedError()
-
-
-def save_model(model):
-    file_path = os.path.dirname(__file__) + "/model.zip"
-    torch.save(model.state_dict(), file_path)
-
-
-def load_model(model):
-    file_path = os.path.dirname(__file__) + "/model.zip"
-    model.load_state_dict(torch.load(file_path))
 
 
 def env_episode(
@@ -349,9 +234,7 @@ def PPO_update(
 
     # Flattening all containers in order to compute components of surrogate losses
     # using minibatches
-    batch_observations = observations.view(
-        (-1, single_obs_shape)
-    )  
+    batch_observations = observations.view((-1, single_obs_shape))
     batch_logprobs = logprobs.view(-1)
     batch_actions = actions.view((-1,) + envs.single_action_space.shape)
     batch_advantages = advantages.view(-1)
@@ -415,6 +298,6 @@ def seeding(seed):
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
- 
+
     # save_params(params)
     PPO("hyperparams.json", device)
