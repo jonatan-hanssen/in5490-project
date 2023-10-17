@@ -1,4 +1,5 @@
 import os
+
 # from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import torch
@@ -58,10 +59,9 @@ class Agent(nn.Module):
                     64,
                 )
             ),
-            # nn.ReLU(),
-            # init_weightsNbias(nn.Linear(64, 64)),
-            # nn.Tanh(),
-            nn.ReLU(),
+            nn.Tanh(),
+            init_weightsNbias(nn.Linear(64, 64)),
+            nn.Tanh(),
             init_weightsNbias(nn.Linear(64, 1), std=1.0),
         )
 
@@ -74,10 +74,9 @@ class Agent(nn.Module):
                     64,
                 )
             ),
-            # nn.ReLU(),
-            # init_weightsNbias(nn.Linear(64, 64)),
-            # nn.Tanh(),
-            nn.ReLU(),
+            nn.Tanh(),
+            init_weightsNbias(nn.Linear(64, 64)),
+            nn.Tanh(),
             init_weightsNbias(nn.Linear(64, envs.single_action_space.n), std=0.01),
         )
 
@@ -93,5 +92,3 @@ class Agent(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(X)
-
-
