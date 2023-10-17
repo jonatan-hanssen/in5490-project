@@ -14,5 +14,6 @@
     "lr":2.5e-4,
     "epochs":20,
     "rollouts":20,
-    "rollot_steps":256
+    "rollot_steps":256,
+    "gae": true
 }

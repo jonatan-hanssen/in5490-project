@@ -1,5 +1,8 @@
 import json
 import gymnasium as gym
+import random
+import numpy as np
+import torch
 
 
 def make_env(env_name, seed):
@@ -31,26 +34,8 @@ def save_params(params):
     json.dump(params, file, indent=4, separators=(",", ":"))
 
 
-def minibatch_generator(params, *args):
-    b_obs = observations.view((-1, single_obs_shape))
-    b_logs = logprobs.view(-1)
-    b_acts = ations.view((-1) + envs.single_action_space.shape)
-    b_advs = advantages.view(-1)
-    b_vals = values.view(-1)
-    b_rets = returns.view(-1)
-
-    batch_idxs = np.random.choice(
-        params["batch_size"], params["batch_size"], replace=False
-    )
-    for start in range(0, params["batch_size"], params["minibatch_size"]):
-        end = start + params["minibatch_size"]
-        minibatch_idxs = batch_idxs[start:end]
-
-        yield (
-            b_obs[minibatch_idxs],
-            b_logs[minibatch_idxs],
-            b_acts[minibatch_idxs],
-            b_advs[minibatch_idxs],
-            b_vals[minibatch_idxs],
-            b_rets[minibatch_idxs],
-        )
+def seeding(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
