@@ -83,36 +83,41 @@ class PPO:
             print(f"Sum of rewards per episode: {torch.sum(self.rewards)}")
             self.PPO_update()
 
-    def next_episode(self, next_done, next_observation):
-        """Steps through a single episode and calculates what is needed to
-        perform PPO update
-        """
-        for step in range(self.args["ep_steps"]):
-            # global_step += args["num_envs"]
-            self.observations[step] = next_observation
-            self.dones[step] = next_done
+    def show_loaded_model(self):
+        load_model(self.agent)
+        seeds = [random.randint(0, 20000) for _ in range(self.args["num_envs"])]
 
+        envs = gym.vector.SyncVectorEnv(
+            [
+                make_env(self.args["env_name"], seeds[i], "human")
+                for i in range(self.args["num_envs"])
+            ]
+        )
+
+        next_observation = torch.Tensor(envs.reset()[0]["image"].flatten()).to(
+            self.device
+        )
+        next_done = torch.zeros(self.args["num_envs"]).to(self.device)
+
+        for step in range(1000):
             with torch.no_grad():
                 action, logprob, _, value = self.agent.get_action_and_value(
                     next_observation
                 )
-                self.values[step] = value.flatten()
-            self.actions[step] = action
-            self.logprobs[step] = logprob
 
-            next_observation, reward, done, truncated, info = self.envs.step(
-                np.array([action.cpu().numpy()])
-            )
-            # Converting to tensor and transfering to gpu for faster computation
-            self.rewards[step] = torch.Tensor(reward).to(self.device).view(-1)
+                next_observation, reward, done, truncated, info = envs.step(
+                    np.array([action.cpu().numpy()])
+                )
+                # Converting to tensor and transfering to gpu for faster computation
 
-            # print(next_observation["image"])
+                # print(next_observation["image"])
 
-            next_observation, next_done = (
-                torch.Tensor(next_observation["image"].flatten()).to(self.device),
-                torch.Tensor(next_done).to(self.device),
-            )
+                next_observation, next_done = (
+                    torch.Tensor(next_observation["image"].flatten()).to(self.device),
+                    torch.Tensor(next_done).to(self.device),
+                )
 
+<<<<<<< Updated upstream
         # Now that the agent(-s) has(-ve) played out an episode, it's time
         # to backtrack all steps, and compute the discounted rewards
         with torch.no_grad():
@@ -131,12 +136,39 @@ class PPO:
                         nextnonterminal = 1.0 - self.dones[t + 1]
                         next_values = self.values[t + 1]
                         last_gae_lam = self.returns[t + 1]
+=======
+    def next_episode(self, next_done, next_observation):
+        """Steps through a single episode and calculates what is needed to
+        perform PPO update
+        """
+        self.observations = torch.zeros(
+            (self.args["ep_steps"], self.args["num_envs"], self.single_obs_shape),
+        ).to(self.device)
+        self.actions = torch.zeros(
+            (self.args["ep_steps"], self.args["num_envs"])
+            + self.envs.single_action_space.shape
+        ).to(self.device)
+        # The ActorCritic Network outputs log probabilities
+        self.logprobs = torch.zeros((self.args["ep_steps"], self.args["num_envs"])).to(
+            self.device
+        )
+        self.rewards = torch.zeros_like(self.logprobs).to(self.device)
+        self.dones = torch.zeros_like(self.logprobs).to(self.device)
+        self.values = torch.zeros_like(self.logprobs).to(self.device)
+        self.advantages = torch.zeros_like(self.logprobs).to(self.device)
+>>>>>>> Stashed changes
 
-                    delta = (
-                        self.rewards[t]
-                        + self.args["gamma"] * next_values * nextnonterminal
-                        - self.values[t]
+        try:
+            for step in range(self.args["ep_steps"]):
+                # global_step += args["num_envs"]
+                self.observations[step] = next_observation
+                self.dones[step] = next_done
+
+                with torch.no_grad():
+                    action, logprob, _, value = self.agent.get_action_and_value(
+                        next_observation
                     )
+<<<<<<< Updated upstream
                     self.advantages[t] = (
                         delta
                         + self.args["gamma"]
@@ -161,6 +193,79 @@ class PPO:
                         + self.args["gamma"] * nextnonterminal * next_return
                     )
                 self.advantages = self.returns - self.values
+=======
+                    self.values[step] = value.flatten()
+                self.actions[step] = action
+                self.logprobs[step] = logprob
+
+                next_observation, reward, done, truncated, info = self.envs.step(
+                    np.array([action.cpu().numpy()])
+                )
+                # reward += llama2_7b_reward_shaper(action, state whatever)
+
+                # print(f"{step=}, {self.args['ep_steps']=} {done=}")
+                # Converting to tensor and transfering to gpu for faster computation
+                self.rewards[step] = torch.Tensor(reward).to(self.device).view(-1)
+
+                # print(next_observation["image"])
+
+                next_observation, next_done = (
+                    torch.Tensor(next_observation["image"].flatten()).to(self.device),
+                    torch.Tensor(next_done).to(self.device),
+                )
+
+            # Now that the agent(-s) has(-ve) played out an episode, it's time
+            # to backtrack all steps, and compute the discounted rewards
+            with torch.no_grad():
+                next_value = self.agent.get_value(next_observation).reshape(1, -1)
+                # General advanatage estimation proposed in the original paper on PPO
+                if self.args["gae"]:
+                    self.returns = torch.zeros_like(self.rewards).to(self.device)
+                    for t in reversed(range(self.args["ep_steps"])):
+                        if t == self.args["ep_steps"] - 1:
+                            # "nextnonterminal" is a environment specific variable indicating if the
+                            # agent has finished the game before reaching time step limit
+                            nextnonterminal = 1.0 - next_done
+                            next_values = next_value
+                            last_gae_lam = 0
+                        else:
+                            nextnonterminal = 1.0 - self.dones[t + 1]
+                            next_values = self.values[t + 1]
+                            last_gae_lam = self.advantages[t + 1]
+
+                        delta = (
+                            self.rewards[t]
+                            + self.args["gamma"] * next_values * nextnonterminal
+                            - self.values[t]
+                        )
+                        self.advantages[t] = (
+                            delta
+                            + self.args["gamma"]
+                            * self.args["gae_lambda"]
+                            * nextnonterminal
+                            * last_gae_lam
+                        )
+                    self.returns = self.advantages + self.values
+                else:
+                    self.returns = torch.zeros_like(self.rewards).to(self.device)
+                    for t in reversed(range(self.args["ep_steps"])):
+                        if t == self.args["ep_steps"] - 1:
+                            nextnonterminal = 1.0 - next_done
+                            nextvalues = next_value
+                            previous_step = 0
+                        else:
+                            nextnonterminal = 1.0 - self.dones[t + 1]
+                            previous_step = self.returns[t + 1]
+                        self.returns[t] = (
+                            self.rewards[t]
+                            + self.args["gamma"] * nextnonterminal * previous_step
+                        )
+                    self.advantages = self.returns - self.values
+        except KeyboardInterrupt:
+            print("saving model")
+            save_model(self.agent)
+            quit()
+>>>>>>> Stashed changes
 
         return next_done, next_observation
 
