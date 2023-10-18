@@ -59,12 +59,9 @@ class Agent(nn.Module):
                     64,
                 )
             ),
-            nn.ReLU(),
+            nn.Tanh(),
             init_weightsNbias(nn.Linear(64, 64)),
-            nn.ReLU(),
-            init_weightsNbias(nn.Linear(64, 64)),
-            # nn.Tanh(),
-            nn.ReLU(),
+            nn.Tanh(),
             init_weightsNbias(nn.Linear(64, 1), std=1.0),
         )
 
@@ -77,14 +74,9 @@ class Agent(nn.Module):
                     64,
                 )
             ),
-            nn.ReLU(),
+            nn.Tanh(),
             init_weightsNbias(nn.Linear(64, 64)),
-            nn.ReLU(),
-            init_weightsNbias(nn.Linear(64, 64)),
-            # nn.ReLU(),
-            # init_weightsNbias(nn.Linear(64, 64)),
-            # nn.Tanh(),
-            nn.ReLU(),
+            nn.Tanh(),
             init_weightsNbias(nn.Linear(64, envs.single_action_space.n), std=0.01),
         )
 

@@ -30,7 +30,7 @@ class PPO:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.agent = Agent(self.envs).to(self.device)
         self.optimizer = optim.Adam(
-            self.agent.parameters(), lr=self.args["lr"], eps=1e-5
+            self.agent.parameters(), lr=self.args["lr"], eps=1e-8
         )
         self.single_obs_shape = int(
             np.array(self.envs.single_observation_space["image"].shape).prod()
@@ -49,15 +49,11 @@ class PPO:
         self.logprobs = torch.zeros((self.args["ep_steps"], self.args["num_envs"])).to(
             self.device
         )
-        self.rewards = torch.zeros((self.args["ep_steps"], self.args["num_envs"])).to(
-            self.device
-        )
-        self.dones = torch.zeros((self.args["ep_steps"], self.args["num_envs"])).to(
-            self.device
-        )
-        self.values = torch.zeros((self.args["ep_steps"], self.args["num_envs"])).to(
-            self.device
-        )
+        self.rewards = torch.zeros_like(self.logprobs).to(self.device)
+        self.dones = torch.zeros_like(self.logprobs).to(self.device)
+        self.values = torch.zeros_like(self.logprobs).to(self.device)
+        self.advantages = torch.zeros_like(self.logprobs).to(self.device)
+        self.returns = torch.zeros_like(self.logprobs).to(self.device)
 
     def do_it(self):
         self.args["batch_size"] = int(self.args["num_envs"] * self.args["ep_steps"])
@@ -77,6 +73,11 @@ class PPO:
 
         # Episode: Moving n steps and estimating the value funvtion for each step
         for rollout in range(self.args["rollouts"] + 1):
+            if self.args["anneal_lr"]:
+                frac = 1.0 - (rollout - 1.0) / self.args["rollouts"]
+                lrnow = frac * self.args["lr"]
+                self.optimizer.param_groups[0]["lr"] = lrnow
+
             print(f"Rollout num: {rollout}")
             next_done, next_observation = self.next_episode(next_done, next_observation)
             print(f"Sum of rewards per episode: {torch.sum(self.rewards)}")
@@ -118,7 +119,7 @@ class PPO:
             next_value = self.agent.get_value(next_observation).reshape(1, -1)
             # General advanatage estimation proposed in the original paper on PPO
             if self.args["gae"]:
-                self.returns = torch.zeros_like(self.rewards).to(self.device)
+                # self.returns = torch.zeros_like(self.rewards).to(self.device)
                 for t in reversed(range(self.args["ep_steps"])):
                     if t == self.args["ep_steps"] - 1:
                         # "nextnonterminal" is a environment specific variable indicating if the
@@ -136,28 +137,28 @@ class PPO:
                         + self.args["gamma"] * next_values * nextnonterminal
                         - self.values[t]
                     )
-                    self.returns[t] = (
+                    self.advantages[t] = (
                         delta
                         + self.args["gamma"]
                         * self.args["gae_lambda"]
                         * nextnonterminal
                         * last_gae_lam
                     )
-                self.advantages = self.returns - self.values
+                self.returns = self.advantages + self.values
+
             else:
-                self.returns = torch.zeros_like(self.rewards).to(self.device)
+                # self.returns = torch.zeros_like(self.rewards).to(self.device)
                 for t in reversed(range(self.args["ep_steps"])):
-                    if t == self.args["num_steps"] - 1:
+                    if t == self.args["ep_steps"] - 1:
                         nextnonterminal = 1.0 - next_done
-                        nextvalues = next_value
+                        next_return = next_value
                     else:
-                        nextnonterminal = 1.0 - dones[t + 1]
+                        nextnonterminal = 1.0 - self.dones[t + 1]
+                        next_return = self.returns[t + 1]
 
                     self.returns[t] = (
                         self.rewards[t]
-                        * self.args["gamma"]
-                        * nextnonterminal
-                        * self.returns[t + 1]
+                        + self.args["gamma"] * nextnonterminal * next_return
                     )
                 self.advantages = self.returns - self.values
 
@@ -224,12 +225,13 @@ class PPO:
                 ) = values
 
                 _, new_logprob, entropy, new_value = self.agent.get_action_and_value(
-                    batch_observations, batch_actions
+                    batch_observations, batch_actions.long()
                 )
+                # print(new_logprob.exp())
 
                 # The probability ratio of the new policy vs the old policy
                 # this is equivalent to prob / prob_old
-                policy_ratio = (new_logprob - batch_logprobs.long()).exp()
+                policy_ratio = (new_logprob - batch_logprobs).exp()
 
                 p_grad_clip1 = policy_ratio * batch_advantages
                 p_grad_clip2 = batch_advantages * torch.clamp(
@@ -253,6 +255,7 @@ class PPO:
 
                 self.optimizer.zero_grad()
                 surrogate_loss.backward()
+                # nn.utils.clip_grad_norm_(self.agent.parameters(), self.args["max_grad_norm"])
                 self.optimizer.step()
 
 
