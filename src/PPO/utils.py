@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 
-def make_env(env_name, seed):
+def make_env(env_name, seed, render_mode="rgb_array"):
     """
     Descr:
         Returns a "vectorized" environenment, meaning that it is wrapped in a gymnasium vector, allowing for
@@ -13,7 +13,7 @@ def make_env(env_name, seed):
     """
 
     def env_gen():
-        env = gym.make(env_name, render_mode="rgb_array")
+        env = gym.make(env_name, render_mode=render_mode)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env.action_space.seed(seed)
         env.observation_space.seed(seed)

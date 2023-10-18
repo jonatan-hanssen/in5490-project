@@ -1,4 +1,5 @@
 import os
+
 # from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import torch
@@ -23,12 +24,12 @@ def init_weightsNbias(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 def save_model(model):
-    file_path = os.path.dirname(__file__) + "/model.zip"
+    file_path = os.path.dirname(__file__) + "/model.pt"
     torch.save(model.state_dict(), file_path)
 
 
 def load_model(model):
-    file_path = os.path.dirname(__file__) + "/model.zip"
+    file_path = os.path.dirname(__file__) + "/model.pt"
     model.load_state_dict(torch.load(file_path))
 
 
@@ -58,8 +59,10 @@ class Agent(nn.Module):
                     64,
                 )
             ),
-            # nn.ReLU(),
-            # init_weightsNbias(nn.Linear(64, 64)),
+            nn.ReLU(),
+            init_weightsNbias(nn.Linear(64, 64)),
+            nn.ReLU(),
+            init_weightsNbias(nn.Linear(64, 64)),
             # nn.Tanh(),
             nn.ReLU(),
             init_weightsNbias(nn.Linear(64, 1), std=1.0),
@@ -74,6 +77,10 @@ class Agent(nn.Module):
                     64,
                 )
             ),
+            nn.ReLU(),
+            init_weightsNbias(nn.Linear(64, 64)),
+            nn.ReLU(),
+            init_weightsNbias(nn.Linear(64, 64)),
             # nn.ReLU(),
             # init_weightsNbias(nn.Linear(64, 64)),
             # nn.Tanh(),
@@ -81,8 +88,10 @@ class Agent(nn.Module):
             init_weightsNbias(nn.Linear(64, envs.single_action_space.n), std=0.01),
         )
 
+        # self.llama_actor = llama2_7b_policy()
+
         # Yet to be integrated -> shall serve as the second actor
-        # .LM_actor = llama2_7b_policy()
+        # self.LM_actor = llama2_7b_policy()
 
     def get_value(self, X):
         return self.critic(X)
@@ -90,8 +99,13 @@ class Agent(nn.Module):
     def get_action_and_value(self, X, action=None):
         logits = self.actor(X)
         probs = Categorical(logits=logits)
+
+        # if self.i_love_llama:
+        #     if self.i_love_adrian:
+        #         probs *= self.llama_actor()
+        #     elif self.i_hate_adrian:
+        #         probs += self.llama_actor()
+
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(X)
-
-
