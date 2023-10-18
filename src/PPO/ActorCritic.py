@@ -51,29 +51,21 @@ class Agent(nn.Module):
     def __init__(self, env):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
-            init_weightsNbias(
-                nn.Linear(
-                    np.array(np.array(env.observation_space["image"].shape)).prod(),
-                    64,
-                )
-            ),
+            init_weightsNbias(nn.Linear(147 * 11, 64, dtype=torch.float64)),
             nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, 64)),
+            init_weightsNbias(nn.Linear(64, 64, dtype=torch.float64)),
             nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, 1), std=1.0),
+            init_weightsNbias(nn.Linear(64, 1, dtype=torch.float64), std=1.0),
         )
 
         self.actor = nn.Sequential(
+            init_weightsNbias(nn.Linear(147 * 11, 64, dtype=torch.float64)),
+            nn.Tanh(),
+            init_weightsNbias(nn.Linear(64, 64, dtype=torch.float64)),
+            nn.Tanh(),
             init_weightsNbias(
-                nn.Linear(
-                    np.array(np.array(env.observation_space["image"].shape)).prod(),
-                    64,
-                )
+                nn.Linear(64, env.action_space.n, dtype=torch.float64), std=0.01
             ),
-            nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, 64)),
-            nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, env.action_space.n), std=0.01),
         )
 
         # self.llama_actor = llama2_7b_policy()
@@ -81,19 +73,27 @@ class Agent(nn.Module):
         # Yet to be integrated -> shall serve as the second actor
         # self.LM_actor = llama2_7b_policy()
 
-    def get_value(self, X):
-        return self.critic(X)
+    def get_value(self, observation):
+        observation = nn.functional.one_hot(
+            observation.to(torch.int64), num_classes=11
+        ).flatten()
+        return self.critic(observation.to(torch.float64))
 
-    def get_action_and_value(self, X, action=None):
-        logits = self.actor(X)
+    def get_action_and_value(self, observation, action=None):
+        observation = (
+            nn.functional.one_hot(observation.to(torch.int64), num_classes=11)
+            .to(torch.float64)
+            .flatten(start_dim=-2)
+        )
+        logits = self.actor(observation)
         probs = Categorical(logits=logits)
 
         # if self.i_love_llama:
         #     if self.i_love_adrian:
-        #         probs *= self.llama_actor()
+        #         probs *= self.llama_actor(X)
         #     elif self.i_hate_adrian:
-        #         probs += self.llama_actor()
+        #         probs += self.llama_actor(X)
 
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(X)
+        return action, probs.log_prob(action), probs.entropy(), self.critic(observation)

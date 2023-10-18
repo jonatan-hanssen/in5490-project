@@ -32,7 +32,11 @@ class PPO:
         # Initialize all observation-, return-, valuevectors and so on
         self.reset_memory()
 
-    def do_it(self):
+    def train(self):
+        """Generates samples from a single episode, backpropagates the samples and
+        repeats for rollout number of times
+        """
+
         self.args["batch_size"] = self.args["steps"]
         self.args["minibatch_size"] = int(
             self.args["batch_size"] // self.args["num_minibatches"]
@@ -48,6 +52,7 @@ class PPO:
             print(f"Sum of rewards per episode: {torch.sum(self.rewards)}")
             self.PPO_update()  # Use values stored to backpropagate using PPO
             self.reset_memory()  # Restore
+        save_model(self.agent)
 
     def next_episode(self):
         """Steps through a single episode and calculates what is needed to
@@ -93,24 +98,24 @@ class PPO:
                     if t == self.args["steps"] - 1:
                         # "nextnonterminal" is a environment specific variable indicating if the
                         # agent has finished the game before reaching time step limit
-                        nextnonterminal = 1.0 - next_done
+                        # nextnonterminal = 1.0 - next_done
                         next_values = next_value
                         last_gae_lam = 0
                     else:
-                        nextnonterminal = 1.0 - self.dones[t + 1]
+                        # nextnonterminal = 1.0 - self.dones[t + 1]
                         next_values = self.values[t + 1]
                         last_gae_lam = self.returns[t + 1]
 
                     delta = (
                         self.rewards[t]
-                        + self.args["gamma"] * next_values * nextnonterminal
-                        - self.values[t]
+                        + self.args["gamma"]
+                        * next_values
+                        * -self.values[t]  # nextnonterminal
                     )
                     self.advantages[t] = (
                         delta
-                        + self.args["gamma"]
-                        * self.args["gae_lambda"]
-                        * nextnonterminal
+                        + self.args["gamma"] * self.args["gae_lambda"]
+                        # * nextnonterminal
                         * last_gae_lam
                     )
                 self.returns = self.advantages + self.values
@@ -123,44 +128,6 @@ class PPO:
                     )
 
                 self.advantages = self.returns - self.values
-
-    def reset_memory(self):
-        self.observations = torch.zeros(self.args["steps"], self.obs_shape).to(
-            self.device
-        )
-        self.actions = torch.zeros(self.args["steps"])
-        # The ActorCritic Network outputs log probabilities
-        self.logprobs = torch.zeros_like(self.actions)
-        self.rewards = torch.zeros_like(self.logprobs)
-        self.values = torch.zeros_like(self.logprobs)
-        self.advantages = torch.zeros_like(self.logprobs)
-        self.returns = torch.zeros_like(self.logprobs)
-
-    def minibatch_generator(self):
-        """This generates a shuffled list of minibatches
-        When next_episode is called, this will have new values because the self values will be changed
-        """
-
-        # NOTE this shuffles but in a Polish way
-        # contrary to popular belief, this is 2% faster than shuffle
-        batch_idxs = np.random.choice(
-            self.args["batch_size"], self.args["batch_size"], replace=False
-        )
-
-        # batch_idxs = np.random.shuffle(np.arange(self.args["batch_size"])
-
-        for start in range(0, self.args["batch_size"], self.args["minibatch_size"]):
-            end = start + self.args["minibatch_size"]
-            minibatch_idxs = batch_idxs[start:end]
-
-            yield (
-                self.observations[minibatch_idxs],
-                self.logprobs[minibatch_idxs],
-                self.actions[minibatch_idxs],
-                self.advantages[minibatch_idxs],
-                self.values[minibatch_idxs],
-                self.returns[minibatch_idxs],
-            )
 
     def PPO_update(self):
         for epoch in range(self.args["epochs"]):
@@ -208,8 +175,68 @@ class PPO:
                 # nn.utils.clip_grad_norm_(self.agent.parameters(), self.args["max_grad_norm"])
                 self.optimizer.step()
 
+    def minibatch_generator(self):
+        """This generates a shuffled list of minibatches
+        When next_episode is called, this will have new values because the self values will be changed
+        """
+
+        # NOTE this shuffles but in a Polish way
+        # contrary to popular belief, this is 2% faster than shuffle
+        batch_idxs = np.random.choice(
+            self.args["batch_size"], self.args["batch_size"], replace=False
+        )
+
+        # batch_idxs = np.random.shuffle(np.arange(self.args["batch_size"])
+
+        for start in range(0, self.args["batch_size"], self.args["minibatch_size"]):
+            end = start + self.args["minibatch_size"]
+            minibatch_idxs = batch_idxs[start:end]
+
+            yield (
+                self.observations[minibatch_idxs],
+                self.logprobs[minibatch_idxs],
+                self.actions[minibatch_idxs],
+                self.advantages[minibatch_idxs],
+                self.values[minibatch_idxs],
+                self.returns[minibatch_idxs],
+            )
+
+    def reset_memory(self):
+        self.observations = torch.zeros(self.args["steps"], self.obs_shape).to(
+            self.device
+        )
+        self.actions = torch.zeros(self.args["steps"])
+        # The ActorCritic Network outputs log probabilities
+        self.logprobs = torch.zeros_like(self.actions)
+        self.rewards = torch.zeros_like(self.logprobs)
+        self.values = torch.zeros_like(self.logprobs)
+        self.advantages = torch.zeros_like(self.logprobs)
+        self.returns = torch.zeros_like(self.logprobs)
+
+    def show_loaded_model(self):
+        load_model(self.agent)
+
+        env = gym.make(
+            self.args["env_name"], render_mode="human", max_steps=self.args["steps"]
+        )
+
+        observation = torch.Tensor(env.reset()[0]["image"].flatten()).to(self.device)
+
+        for step in range(1000):
+            with torch.no_grad():
+                action, logprob, _, value = self.agent.get_action_and_value(observation)
+
+            observation, reward, done, truncated, info = env.step(
+                np.array([action.cpu().numpy()])
+            )
+
+            if done:
+                observation, _ = env.reset()
+
+            observation = torch.Tensor(observation["image"].flatten()).to(self.device)
+
 
 if __name__ == "__main__":
     ppo = PPO("hyperparams.json")
     # save_params(self.self.args)
-    ppo.do_it()
+    ppo.train()
