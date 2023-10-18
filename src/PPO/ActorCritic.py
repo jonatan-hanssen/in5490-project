@@ -48,14 +48,12 @@ class Agent(nn.Module):
         the agent is in.
     """
 
-    def __init__(self, envs):
+    def __init__(self, env):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
             init_weightsNbias(
                 nn.Linear(
-                    np.array(
-                        np.array(envs.single_observation_space["image"].shape)
-                    ).prod(),
+                    np.array(np.array(env.observation_space["image"].shape)).prod(),
                     64,
                 )
             ),
@@ -68,16 +66,14 @@ class Agent(nn.Module):
         self.actor = nn.Sequential(
             init_weightsNbias(
                 nn.Linear(
-                    np.array(
-                        np.array(envs.single_observation_space["image"].shape)
-                    ).prod(),
+                    np.array(np.array(env.observation_space["image"].shape)).prod(),
                     64,
                 )
             ),
             nn.Tanh(),
             init_weightsNbias(nn.Linear(64, 64)),
             nn.Tanh(),
-            init_weightsNbias(nn.Linear(64, envs.single_action_space.n), std=0.01),
+            init_weightsNbias(nn.Linear(64, env.action_space.n), std=0.01),
         )
 
         # self.llama_actor = llama2_7b_policy()
