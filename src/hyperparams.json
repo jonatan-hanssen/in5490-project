@@ -1,5 +1,5 @@
 {
-    "rollouts":150,
+    "rollouts":50,
     "steps":1024,
     "seed":42069,
     "gamma":0.99,
@@ -9,7 +9,7 @@
     "value_loss_coef":0.5,
     "entropy_coef":0.01,
     "max_grad_norm":0.5,
-    "env_name":"MiniGrid-Empty-6x6-v0",
+    "env_name":"MiniGrid-DoorKey-5x5-v0",
     "lr":2.5e-5,
     "epochs":10,
     "gae": false

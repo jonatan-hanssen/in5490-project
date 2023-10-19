@@ -9,7 +9,7 @@ from sentence_transformers import SentenceTransformer
 base_path = os.path.dirname(__file__)
 
 
-class llama2_7b_reward_shaper:
+class llama2_base:
     """Reward shaper
 
     Takes in an observation matrix, and generates a list of suggestions. These can be compared with actions and reward will be generated
@@ -19,7 +19,7 @@ class llama2_7b_reward_shaper:
         self,
         goal,
         cos_sim_threshold=0.6,
-        reward_multiplier=0.001,
+        similarity_modifier=0.001,
         temperature=0.6,
         top_p=0.9,
         rl_temp=0,
@@ -89,12 +89,13 @@ class llama2_7b_reward_shaper:
         """Creates a list of suggested actions based on the current observation
 
         Args:
-            observation: the full observation returned by gymnasium environment
+            observation: image observation returned by gym environment
 
         Returns:
             A list of strings of suggested actions by the LLM. Also sets self.suggestions
 
         """
+        observation = obs_to_string(observation, False, False)
 
         observation = f"My goal is: {self.goal}. {observation}"
 
@@ -146,7 +147,7 @@ class llama2_7b_reward_shaper:
                 max_cos_sim = cos_sim
 
         if max_cos_sim > self.cos_sim_threshold:
-            return cos_sim * self.reward_multiplier
+            return cos_sim * self.similarity_modifier
         else:
             return 0
 
@@ -222,97 +223,41 @@ def caption_action(action, obs_matrix):
     return caption
 
 
-class llama2_7b_policy:
-    def __init__(self, temperature=0.6, top_p=0.9, rl_temp=0, dialogue_memory=24):
-        self.generator = Llama.build(
-            ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
-            tokenizer_path=os.path.join(
-                base_path, "../llama-2-7b-chat/tokenizer.model"
-            ),
-            max_seq_len=2048,
-            max_batch_size=6,
+class llama2_reward_shaper(llama2_base):
+    def __init__(
+        self,
+        goal,
+        cos_sim_threshold=0.6,
+        similarity_modifier=0.001,
+        temperature=0.6,
+        top_p=0.9,
+        rl_temp=0,
+    ):
+        super().__init__(
+            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp
         )
 
-        self.temperature = temperature
-        self.dialogue_memory = dialogue_memory
-        self.top_p = top_p
-        self.rl_temp = rl_temp
-        self.prev_obs_matrix = np.zeros((7, 7, 3))
-        self.dialog = [
-            {
-                "role": "system",
-                "content": "You are a player playing a videogame. It is a top down turn based game, where each turn you can perform one action. Every action is either a movement, or an interaction. List of possible movement actions: {'RIGHT', 'LEFT', 'FORWARD'}. List of possible interaction actions: {'PICKUP', 'DROP', 'TOGGLE'}. List of interactable objects in the game: {'KEY', 'DOOR', 'CHEST'}. You are to decide which action is performed on the current turn. When answering, you shall strictly only reply with a single one of the capitalized actions from the either the movement action list, or the interaction action list. You must always answer with EXACTLY 1 word.",
-            },
-            {
-                "role": "user",
-                "content": "You see a red key 1 square FORWARD. What should you do?",
-            },
-            {
-                "role": "assistant",
-                "content": "PICKUP",
-            },
-        ]
 
-    def __call__(self, obs_matrix, action_list, env):
-        if np.array_equal(obs_matrix, self.prev_obs_matrix):
-            observation = "Nothing changed based on your previous move"
-        else:
-            observation = obs_to_string(obs_matrix)
-
-        self.prev_obs_matrix = obs_matrix
-
-        # if "nothing" in observation:
-        #     action_list.append(env.action_space.sample())
-        #     return
-
-        heat = random.random()
-
-        if heat < self.rl_temp:
-            action_list.append(env.action_space.sample())
-            return
-
-        self.dialog.append({"role": "user", "content": observation})
-        print(self.dialog)
-
-        result = self.generator.chat_completion(
-            [self.dialog],  # type: ignore
-            max_gen_len=100,
-            temperature=self.temperature,
-            top_p=self.top_p,
+class llama2_policy(llama2_base):
+    def __init__(
+        self,
+        goal,
+        cos_sim_threshold=0.6,
+        similarity_modifier=0.001,
+        temperature=0.6,
+        top_p=0.9,
+        rl_temp=0,
+    ):
+        super().__init__(
+            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp
         )
 
-        answer = result[0]["generation"]["content"]
+    def __call__(self, observation):
+        # this sets self.suggestions
+        self.suggets(observation)
 
-        self.dialog.append({"role": "assistant", "content": answer})
-
-        print(answer)
-
-        if "FORWARD" in answer:
-            action_list.append(constants.ACTION_TO_IDX["forward"])
-
-        elif "LEFT" in answer:
-            action_list.append(constants.ACTION_TO_IDX["left"])
-            action_list.append(constants.ACTION_TO_IDX["forward"])
-
-        elif "RIGHT" in answer:
-            action_list.append(constants.ACTION_TO_IDX["right"])
-            action_list.append(constants.ACTION_TO_IDX["forward"])
-
-        elif "PICKUP" in answer:
-            action_list.append(constants.ACTION_TO_IDX["pick"])
-
-        elif "TOGGLE" in answer:
-            action_list.append(constants.ACTION_TO_IDX["toggle"])
-
-        elif "DROP" in answer:
-            action_list.append(constants.ACTION_TO_IDX["drop"])
-
-        else:
-            action_list.append(constants.ACTION_TO_IDX["toggle"])
-
-        if len(self.dialog) > self.dialogue_memory:
-            self.dialog.pop(3)
-            self.dialog.pop(3)
+        # give cosine similarities for all possible actions over a certain threshold
+        return np.array([self.compare(action, observation) for action in range(7)])
 
 
 def obs_to_string(obs_matrix, positions=True, you=True):

@@ -14,7 +14,7 @@ import json
 
 
 class PPO:
-    def __init__(self, param_file):
+    def __init__(self, param_file, llama_policy=False, llama_reward=False):
         self.args = read_params(param_file)
         seeding(self.args["seed"])
 
@@ -23,11 +23,17 @@ class PPO:
         )
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.agent = Agent(self.env).to(self.device)
+        self.agent = Agent(self.env, llama_policy).to(self.device)
         self.optimizer = optim.Adam(
             self.agent.parameters(), lr=self.args["lr"], eps=1e-8
         )
         self.obs_shape = int(np.array(self.env.observation_space["image"].shape).prod())
+
+        self.reward_shaper = (
+            llama2_reward_shaper(self.env.reset()[0]["mission"])
+            if llama_reward
+            else None
+        )
 
         # Initialize all observation-, return-, valuevectors and so on
         self.reset_memory()
@@ -58,9 +64,8 @@ class PPO:
         """Steps through a single episode and calculates what is needed to
         perform PPO update
         """
-        observation = torch.Tensor(self.env.reset()[0]["image"].flatten()).to(
-            self.device
-        )
+        observation_dict, _ = self.env.reset()
+        observation = torch.Tensor(observation_dict["image"].flatten()).to(self.device)
 
         for step in range(self.args["steps"]):
             self.observations[step] = observation
@@ -72,13 +77,21 @@ class PPO:
             self.actions[step] = action
             self.logprobs[step] = logprob
 
+            # LLM reward shaping
+            if self.reward_shaper:
+                # this sets self.suggestions
+                self.reward_shaper.suggest(observation_dict["image"])
+                advisor_reward = self.reward_shaper.compare(
+                    action.cpu().numpy(), observation_dict["image"]
+                )
+            else:
+                advisor_reward = 0
+
             observation_dict, reward, done, truncated, info = self.env.step(
                 action.cpu().numpy()
             )
-            # Converting to tensor and transfering to gpu for faster computation
-            self.rewards[step] = reward
 
-            # print(next_observation["image"])
+            self.rewards[step] = reward + advisor_reward
 
             observation = torch.Tensor(observation_dict["image"].flatten()).to(
                 self.device
@@ -237,6 +250,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json")
+    ppo = PPO("hyperparams.json", True)
     # save_params(self.self.args)
     ppo.train()

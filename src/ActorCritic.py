@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
+from utils import llama2_policy
 
 
 def init_weightsNbias(layer, std=np.sqrt(2), bias_const=0.0):
@@ -48,7 +49,7 @@ class Agent(nn.Module):
         the agent is in.
     """
 
-    def __init__(self, env):
+    def __init__(self, env, llama=False):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
             init_weightsNbias(nn.Linear(147 * 11, 64, dtype=torch.float64)),
@@ -68,7 +69,8 @@ class Agent(nn.Module):
             ),
         )
 
-        # self.llama_actor = llama2_7b_policy()
+        goal = env.reset()[0]["mission"]
+        self.consigliere = llama2_policy(goal) if llama else None
 
         # Yet to be integrated -> shall serve as the second actor
         # self.LM_actor = llama2_7b_policy()
@@ -80,20 +82,32 @@ class Agent(nn.Module):
         return self.critic(observation.to(torch.float64))
 
     def get_action_and_value(self, observation, action=None):
-        observation = (
+        observation_onehot = (
             nn.functional.one_hot(observation.to(torch.int64), num_classes=11)
             .to(torch.float64)
             .flatten(start_dim=-2)
         )
-        logits = self.actor(observation)
-        probs = Categorical(logits=logits)
+        logits = self.actor(observation_onehot)
 
-        # if self.i_love_llama:
-        #     if self.i_love_adrian:
-        #         probs *= self.llama_actor(X)
-        #     elif self.i_hate_adrian:
-        #         probs += self.llama_actor(X)
+        if self.consigliere:
+            logits = torch.nn.functional.softmax(logits)
+            # its flattened so we need to make it normal again
+            unflat_obs = np.array(observation.reshape((7, 7, 3)).to(torch.int64))
+            # this stores suggested actions
+            self.consigliere.suggest(unflat_obs)
+            # compares all possible actions to suggestions
+            advisor_values = self.consigliere.give_values(unflat_obs)
+
+            # anti adrian propaganda
+            logits += advisor_values
+
+        probs = Categorical(logits=logits)
 
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(observation)
+        return (
+            action,
+            probs.log_prob(action),
+            probs.entropy(),
+            self.critic(observation_onehot),
+        )
