@@ -4,7 +4,7 @@ import time
 import constants
 import numpy as np
 
-from utils import obs_to_string, llama2_7b_reward_shaper, caption_action
+from utils import obs_to_string, llama2_reward_shaper, caption_action
 
 env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
 

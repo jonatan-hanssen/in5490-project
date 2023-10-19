@@ -328,13 +328,13 @@ def seeding(seed):
     torch.backends.cudnn.deterministic = True
 
 
-def read_params(params):
-    file = open(params)
+def read_params(params_file):
+    file = open(os.path.join(base_path,params_file))
     params = json.load(file)
     # print(json.dumps(params, indent=4, separators=(":", ",")))
     return params
 
 
 def save_params(params):
-    file = open("hyperparams.json", "w")
+    file = open(os.path.join(base_path, "hyperparams.json"), "w")
     json.dump(params, file, indent=4, separators=(",", ":"))
