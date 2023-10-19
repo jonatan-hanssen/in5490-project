@@ -33,7 +33,7 @@ class llama2_base:
             max_batch_size=6,
         )
 
-        self.reward_multiplier = reward_multiplier
+        self.similarity_modifier = similarity_modifier
         self.cos_sim_threshold = cos_sim_threshold
 
         self.semantic_model = SentenceTransformer("all-MiniLM-L6-v2")

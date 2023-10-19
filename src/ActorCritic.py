@@ -90,7 +90,7 @@ class Agent(nn.Module):
         logits = self.actor(observation_onehot)
 
         if self.consigliere:
-            logits = torch.nn.functional.softmax(logits)
+            logits = torch.nn.functional.softmax(logits, dim=-1)
             # its flattened so we need to make it normal again
             unflat_obs = np.array(observation.reshape((7, 7, 3)).to(torch.int64))
             # this stores suggested actions
