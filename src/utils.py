@@ -1,7 +1,8 @@
 import constants
+import torch
 import numpy as np
 from llama import Llama
-import os, time, random
+import os, time, random, json
 from sentence_transformers import SentenceTransformer
 
 
@@ -373,3 +374,22 @@ def obs_to_string(obs_matrix, positions=True, you=True):
     # Please only answer with a single of the following commands: RIGHT, LEFT, FORWARD or PICK UP."
 
     return observation
+
+
+def seeding(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+
+
+def read_params(params):
+    file = open(params)
+    params = json.load(file)
+    # print(json.dumps(params, indent=4, separators=(":", ",")))
+    return params
+
+
+def save_params(params):
+    file = open("hyperparams.json", "w")
+    json.dump(params, file, indent=4, separators=(",", ":"))
