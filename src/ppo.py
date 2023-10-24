@@ -1,4 +1,3 @@
-
 import os
 from distutils.util import strtobool
 import time
@@ -92,7 +91,6 @@ class PPO:
                 action.cpu().numpy()
             )
 
-
             self.rewards[step] = reward + advisor_reward
 
             observation = torch.Tensor(observation_dict["image"].flatten()).to(
@@ -102,47 +100,22 @@ class PPO:
             if done:
                 break
 
-        # Now that the agent(-s) has(-ve) played out an episode, it's time
+        # Now that the agent has played out an episode, it's time
         # to backtrack all steps, and compute the discounted rewards
         with torch.no_grad():
-            next_value = self.agent.get_value(observation).reshape(1, -1)
-            # General advanatage estimation proposed in the original paper on PPO
-            if self.args["gae"]:
-                # self.returns = torch.zeros_like(self.rewards).to(self.device)
-                for t in reversed(range(self.args["steps"])):
-                    if t == self.args["steps"] - 1:
-                        # "nextnonterminal" is a environment specific variable indicating if the
-                        # agent has finished the game before reaching time step limit
-                        # nextnonterminal = 1.0 - next_done
-                        next_values = next_value
-                        last_gae_lam = 0
-                    else:
-                        # nextnonterminal = 1.0 - self.dones[t + 1]
-                        next_values = self.values[t + 1]
-                        last_gae_lam = self.returns[t + 1]
+            self.returns[-1] = self.rewards[-1]
+            for i in reversed(range(self.args["steps"] - 1)):
+                self.returns[i] = (
+                    self.rewards[i] + self.returns[i + 1] * self.args["gamma"]
+                )
+            self.advantages = self.returns - self.values
 
-                    delta = (
-                        self.rewards[t]
-                        + self.args["gamma"]
-                        * next_values
-                        * -self.values[t]  # nextnonterminal
-                    )
-                    self.advantages[t] = (
-                        delta
-                        + self.args["gamma"] * self.args["gae_lambda"]
-                        # * nextnonterminal
-                        * last_gae_lam
-                    )
-                self.returns = self.advantages + self.values
-
-            else:
-                self.returns[-1] = self.rewards[-1]
-                for i in reversed(range(self.args["steps"] - 1)):
-                    self.returns[i] = (
-                        self.rewards[i] + self.returns[i + 1] * self.args["gamma"]
-                    )
-
-                self.advantages = self.returns - self.values
+            # self.advantages = torch.where(
+            #     self.returns != 0,
+            #     self.returns - self.values,
+            #     torch.zeros_like(self.returns),
+            # )
+            # print(f"{self.advantages=}")
 
     def PPO_update(self):
         for epoch in range(self.args["epochs"]):
@@ -183,11 +156,10 @@ class PPO:
                 # Computing expected value of Entropy Loss
                 entropy_loss = entropy.mean() * self.args["entropy_coef"]
 
-                surrogate_loss = -clip_loss + value_loss + entropy_loss
+                surrogate_loss = -clip_loss + value_loss - entropy_loss
 
                 self.optimizer.zero_grad()
                 surrogate_loss.backward()
-                # nn.utils.clip_grad_norm_(self.agent.parameters(), self.args["max_grad_norm"])
                 self.optimizer.step()
 
     def minibatch_generator(self):
