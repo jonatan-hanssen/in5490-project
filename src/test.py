@@ -3,29 +3,30 @@ import matplotlib.pyplot as plt
 import time
 import constants
 import numpy as np
+import torch
+from utils import caption_action
 
-from utils import obs_to_string, llama2_7b_policy
 
 env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
 
 
-# observation, info = env.reset(seed=1)
-observation, info = env.reset()
+obs, dog = env.reset()
+print(obs)
+obs = obs["image"]
+observation = env.step(1)[0]["image"]
+stringy = [[f"{cell[0]}{cell[1]}{cell[2]}" for cell in row] for row in observation]
+for row in stringy:
+    print(row)
+print(observation.shape)
+observation = torch.Tensor(observation).flatten()
+print(observation.shape)
 
-policy = llama2_7b_policy(rl_temp=0.0, dialogue_memory=8)
+observation = np.array(observation.reshape((7, 7, 3)).to(torch.int64))
+print(observation.shape)
 
-action_list = list()
+stringy = [[f"{cell[0]}{cell[1]}{cell[2]}" for cell in row] for row in observation]
+for row in stringy:
+    print(row)
 
-for _ in range(1000):
-    if not action_list:
-        policy(observation["image"], action_list, env)
-        input()
-
-    # print([constants.IDX_TO_ACTION[idx] for idx in action_list])
-    action = action_list.pop(0)
-
-    observation, reward, terminated, truncated, info = env.step(action)
-
-    if terminated or truncated:
-        observation, info = env.reset()
+print(caption_action(1, observation))
 env.close()

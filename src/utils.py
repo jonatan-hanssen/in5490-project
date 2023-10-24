@@ -252,7 +252,7 @@ class llama2_policy(llama2_base):
             goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp
         )
 
-    def __call__(self, observation):
+    def give_values(self, observation):
         # this sets self.suggestions
         self.suggets(observation)
 
