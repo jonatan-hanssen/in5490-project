@@ -44,6 +44,8 @@ class llama2_base:
         self.suggestions = None
         self.goal = goal
 
+        self.cache = dict()
+
         self.caption_set = set()
 
         self.dialog = [
@@ -101,21 +103,32 @@ class llama2_base:
 
         self.dialog.append({"role": "user", "content": observation})
 
-        result = self.generator.chat_completion(
-            [self.dialog],  # type: ignore
-            max_gen_len=100,
-            temperature=self.temperature,
-            top_p=self.top_p,
-        )
 
-        answer = result[0]["generation"]["content"]
+        if observation in self.cache.keys():
+            answer = self.cache[observation]
 
-        print(observation)
-        print(answer)
+        else:
+            # print("Cache miss")
+            result = self.generator.chat_completion(
+                [self.dialog],  # type: ignore
+                max_gen_len=100,
+                temperature=self.temperature,
+                top_p=self.top_p,
+            )
+
+            answer = result[0]["generation"]["content"]
+
+            # print(f"{observation=}")
+            # print(f"{answer=}")
+
+            self.cache[observation] = answer
 
         self.dialog.pop(-1)
 
         self.suggestions = answer
+
+    def reset_cache(self):
+        self.cache = dict()
 
     def compare(self, action, obs_matrix):
         """Compares the semantic similarity between an action and the current list of suggested actions
@@ -135,14 +148,13 @@ class llama2_base:
         self.caption_set.add(caption)
 
         max_cos_sim = 0
-        print(f"{caption=}")
+        # print(f"{caption=}")
         for suggestion in self.suggestions.splitlines():
-            print(f"{suggestion=}")
+            # print(f"{suggestion=}")
             a, b = self.semantic_model.encode([caption, suggestion])
 
             cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
 
-            print(f"{cos_sim=}")
             if cos_sim > max_cos_sim:
                 max_cos_sim = cos_sim
 

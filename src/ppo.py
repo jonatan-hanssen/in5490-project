@@ -58,7 +58,7 @@ class PPO:
             print(f"Sum of rewards per episode: {torch.sum(self.rewards)}")
             self.PPO_update()  # Use values stored to backpropagate using PPO
             self.reset_memory()  # Restore
-        save_model(self.agent)
+            save_model(self.agent)
 
     def next_episode(self):
         """Steps through a single episode and calculates what is needed to
@@ -81,8 +81,9 @@ class PPO:
             if self.reward_shaper:
                 # this sets self.suggestions
                 self.reward_shaper.suggest(observation_dict["image"])
+                # print(action)
                 advisor_reward = self.reward_shaper.compare(
-                    action.cpu().numpy(), observation_dict["image"]
+                    int(action.cpu()), observation_dict["image"]
                 )
             else:
                 advisor_reward = 0
@@ -100,6 +101,9 @@ class PPO:
             if done:
                 break
 
+        if self.reward_shaper:
+            self.reward_shaper.reset_cache()
+
         # Now that the agent has played out an episode, it's time
         # to backtrack all steps, and compute the discounted rewards
         with torch.no_grad():
@@ -116,6 +120,7 @@ class PPO:
             #     torch.zeros_like(self.returns),
             # )
             # print(f"{self.advantages=}")
+
 
     def PPO_update(self):
         for epoch in range(self.args["epochs"]):
@@ -224,6 +229,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", False)
+    ppo = PPO("hyperparams.json", False, True)
     # save_params(self.self.args)
     ppo.train()
