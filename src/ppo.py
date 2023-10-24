@@ -1,4 +1,4 @@
-import argparse
+
 import os
 from distutils.util import strtobool
 import time
@@ -22,7 +22,8 @@ class PPO:
             self.args["env_name"], render_mode="rgb_array", max_steps=self.args["steps"]
         )
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
         self.agent = Agent(self.env, llama_policy).to(self.device)
         self.optimizer = optim.Adam(
             self.agent.parameters(), lr=self.args["lr"], eps=1e-8
@@ -90,6 +91,7 @@ class PPO:
             observation_dict, reward, done, truncated, info = self.env.step(
                 action.cpu().numpy()
             )
+
 
             self.rewards[step] = reward + advisor_reward
 
@@ -218,13 +220,13 @@ class PPO:
         self.observations = torch.zeros(self.args["steps"], self.obs_shape).to(
             self.device
         )
-        self.actions = torch.zeros(self.args["steps"])
+        self.actions = torch.zeros(self.args["steps"]).to(self.device)
         # The ActorCritic Network outputs log probabilities
-        self.logprobs = torch.zeros_like(self.actions)
-        self.rewards = torch.zeros_like(self.logprobs)
-        self.values = torch.zeros_like(self.logprobs)
-        self.advantages = torch.zeros_like(self.logprobs)
-        self.returns = torch.zeros_like(self.logprobs)
+        self.logprobs = torch.zeros_like(self.actions).to(self.device)
+        self.rewards = torch.zeros_like(self.logprobs).to(self.device)
+        self.values = torch.zeros_like(self.logprobs).to(self.device)
+        self.advantages = torch.zeros_like(self.logprobs).to(self.device)
+        self.returns = torch.zeros_like(self.logprobs).to(self.device)
 
     def show_loaded_model(self):
         load_model(self.agent)
