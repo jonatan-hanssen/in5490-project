@@ -181,7 +181,7 @@ class PPO:
                 # Computing expected value of Entropy Loss
                 entropy_loss = entropy.mean() * self.args["entropy_coef"]
 
-                surrogate_loss = clip_loss - value_loss + entropy_loss
+                surrogate_loss = -clip_loss + value_loss + entropy_loss
 
                 self.optimizer.zero_grad()
                 surrogate_loss.backward()
@@ -250,6 +250,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", True)
+    ppo = PPO("hyperparams.json", False)
     # save_params(self.self.args)
     ppo.train()
