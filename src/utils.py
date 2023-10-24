@@ -149,6 +149,7 @@ class llama2_base:
 
         max_cos_sim = 0
         # print(f"{caption=}")
+        best_suggestion = None
         for suggestion in self.suggestions.splitlines():
             # print(f"{suggestion=}")
             a, b = self.semantic_model.encode([caption, suggestion])
@@ -157,8 +158,13 @@ class llama2_base:
 
             if cos_sim > max_cos_sim:
                 max_cos_sim = cos_sim
+                best_suggestion = suggestion
 
         if max_cos_sim > self.cos_sim_threshold:
+            print(f"{max_cos_sim=}")
+            print(f"{best_suggestion=}")
+            print(f"{caption=}")
+
             return cos_sim * self.similarity_modifier
         else:
             return 0
@@ -266,10 +272,10 @@ class llama2_policy(llama2_base):
 
     def give_values(self, observation):
         # this sets self.suggestions
-        self.suggets(observation)
+        self.suggest(observation)
 
         # give cosine similarities for all possible actions over a certain threshold
-        return np.array([self.compare(action, observation) for action in range(7)])
+        return torch.tensor([self.compare(action, observation) for action in range(7)])
 
 
 def obs_to_string(obs_matrix, positions=True, you=True):

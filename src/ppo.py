@@ -21,8 +21,8 @@ class PPO:
             self.args["env_name"], render_mode="rgb_array", max_steps=self.args["steps"]
         )
 
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = torch.device("cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("cpu")
         self.agent = Agent(self.env, llama_policy).to(self.device)
         self.optimizer = optim.Adam(
             self.agent.parameters(), lr=self.args["lr"], eps=1e-8
@@ -30,7 +30,7 @@ class PPO:
         self.obs_shape = int(np.array(self.env.observation_space["image"].shape).prod())
 
         self.reward_shaper = (
-            llama2_reward_shaper(self.env.reset()[0]["mission"])
+            llama2_reward_shaper(self.env.reset()[0]["mission"], similarity_modifier=0.05)
             if llama_reward
             else None
         )
@@ -229,6 +229,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", False, True)
+    ppo = PPO("hyperparams.json", True, False)
     # save_params(self.self.args)
     ppo.train()
