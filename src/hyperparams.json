@@ -1,14 +1,15 @@
 {
-    "rollouts":500,
+    "rollouts":2000,
     "steps":1024,
     "seed":42069,
     "gamma":0.99,
     "gae_lambda":0.95,
     "num_minibatches":8,
-    "clip_epsilon":0.1,
-    "value_loss_coef":0.1,
-    "entropy_coef":0.01,
+    "clip_epsilon":0.2,
+    "value_loss_coef":0.30,
+    "entropy_coef":0.0,
     "env_name":"MiniGrid-Unlock-v0",
-    "lr":2.5e-3,
-    "epochs":5
+    "lr":3.0e-4,
+    "epochs":10,
+	"standarization":false,
 }

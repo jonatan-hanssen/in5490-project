@@ -229,6 +229,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", True, False)
+    ppo = PPO("hyperparams.json", False, False)
     # save_params(self.self.args)
     ppo.train()
