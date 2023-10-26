@@ -1,5 +1,14 @@
 # in5490-project
 
+
+MESSAGE to greg:
+```ssh uiobrukernavn@dancer.ifi.uio.no```
+If at home
+```
+ssh uiobrukernavn@login.ifi.uio.no
+ssh uiobrukernavn@dancer.ifi.uio.no
+```
+
 Repository for the IN5490 Group Project
 
 Project paper can be found at [doc/paper.pdf](doc/paper.pdf).
