@@ -94,6 +94,20 @@ The agent is trained as in the baseline. The agent's state observation is encode
 
 \section{Experiments}
 
+\subsection{Minigrid Environments}
+
+Minigrid is a library containing simple grid world environments. An important characteristic of all these environments is that they only give reward on the completion of the goal of the environment. In other words, the environment only ever gives out a single reward per episode, at the end of the episode. Goals in minigrid are often simple tasks, such as "unlock the door", "go to the goal", "pick up the red chest". Completing these goals often requires the completion of subtasks; going to the goal might require opening a door, and opening the door might require picking up a key. These environments are partially observable, which means that the agent only receives a seven by seven observation grid, not the entire grid. Figure \ref{doorkeyenv}, shows a typical minigrid environment. In this case, the agent (the red arrow) only sees the left room, and does not know where the goal is.
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/doorkeyenv.png}}
+\caption{The Minigrid DoorKey environment}
+\label{doorkeyenv}
+\end{figure}
+
+
+
+
+
 \section{Results}
 
 \section{Conclusion}
