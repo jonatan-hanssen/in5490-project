@@ -23,6 +23,7 @@ class llama2_base:
         temperature=0.6,
         top_p=0.9,
         rl_temp=0,
+        cache_file="llm_cache.json",
     ):
         self.generator = Llama.build(
             ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
@@ -44,7 +45,16 @@ class llama2_base:
         self.suggestions = None
         self.goal = goal
 
-        self.cache = dict()
+        self.cache_file = cache_file
+
+        if self.cache_file:
+            self.cache_file = os.path.join(base_path, cache_file)
+
+            if os.path.exists(self.cache_file):
+                with open(self.cache_file) as file:
+                    self.cache = json.load(file)
+        else:
+            self.cache = dict()
 
         self.caption_set = set()
 
@@ -130,6 +140,11 @@ class llama2_base:
     def reset_cache(self):
         self.cache = dict()
 
+    def save_cache(self):
+        if self.cache_file:
+            with open(self.cache_file, "w") as file:
+                json.dump(self.cache, file)
+
     def compare(self, action, obs_matrix):
         """Compares the semantic similarity between an action and the current list of suggested actions
 
@@ -161,11 +176,12 @@ class llama2_base:
                 best_suggestion = suggestion
 
         if max_cos_sim > self.cos_sim_threshold:
-            print(f"{max_cos_sim=}")
-            print(f"{best_suggestion=}")
-            print(f"{caption=}")
+            # print(f"{max_cos_sim=}")
+            # print(f"{caption=}")
+            # print(f"{best_suggestion=}")
+            # print()
 
-            return cos_sim * self.similarity_modifier
+            return max_cos_sim * self.similarity_modifier
         else:
             return 0
 
@@ -250,9 +266,10 @@ class llama2_reward_shaper(llama2_base):
         temperature=0.6,
         top_p=0.9,
         rl_temp=0,
+        cache_file=None,
     ):
         super().__init__(
-            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp
+            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file
         )
 
 
@@ -265,9 +282,10 @@ class llama2_policy(llama2_base):
         temperature=0.6,
         top_p=0.9,
         rl_temp=0,
+        cache_file=None,
     ):
         super().__init__(
-            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp
+            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file
         )
 
     def give_values(self, observation):
