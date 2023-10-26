@@ -340,7 +340,7 @@ def obs_to_string(obs_matrix, positions=True, you=True):
     for i in range(len(obs_matrix)):
         for j in range(len(obs_matrix[i])):
             cell = obs_matrix[i][j]
-            print(cell)
+            
             if cell[0] < 4:
                 continue
 
