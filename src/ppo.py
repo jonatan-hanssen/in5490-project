@@ -10,12 +10,17 @@ from torch.distributions.categorical import Categorical
 from ActorCritic import *
 from utils import *
 import json
+import matplotlib.pyplot as plt
 
+base_path = os.path.dirname(__file__)
+print(base_path)
 
 class PPO:
-    def __init__(self, param_file, llama_policy=False, llama_reward=False):
+    def __init__(self, param_file, llama_policy=False, llama_reward=False, results_file=None):
         self.args = read_params(param_file)
         seeding(self.args["seed"])
+
+        self.results_file = results_file
 
         self.env = gym.make(
             self.args["env_name"], render_mode="rgb_array", max_steps=self.args["steps"]
@@ -30,7 +35,7 @@ class PPO:
         self.obs_shape = int(np.array(self.env.observation_space["image"].shape).prod())
 
         self.reward_shaper = (
-            llama2_reward_shaper(self.env.reset()[0]["mission"], similarity_modifier=0.05)
+            llama2_reward_shaper(self.env.reset()[0]["mission"], similarity_modifier=0.005, cos_sim_threshold=0.84, cache_file="llm_cache.json")
             if llama_reward
             else None
         )
@@ -43,6 +48,8 @@ class PPO:
         repeats for rollout number of times
         """
 
+        rewards = list()
+
         self.args["batch_size"] = self.args["steps"]
         self.args["minibatch_size"] = int(
             self.args["batch_size"] // self.args["num_minibatches"]
@@ -52,20 +59,42 @@ class PPO:
         # Initializing the next step
 
         # Episode: Moving n steps and estimating the value funvtion for each step
+
+        i = 0
         for rollout in range(self.args["rollouts"]):
             print(f"Rollout num: {rollout}")
-            self.next_episode()  # Perform steps and store relevant values
-            print(f"Sum of rewards per episode: {torch.sum(self.rewards)}")
+            env_reward, advisor_reward_cum = self.next_episode()  # Perform steps and store relevant values
+            rewards.append(env_reward)
+            # if not env_reward:
+            #     print("No reward received, skipping update of networks")
+            #     continue
+            print(f"Env reward: {env_reward}")
+            print(f"LLM reward: {advisor_reward_cum}")
             self.PPO_update()  # Use values stored to backpropagate using PPO
             self.reset_memory()  # Restore
-            save_model(self.agent)
+
+            if i % 10 == 0:
+                save_model(self.agent)
+                if self.results_file:
+                    file_name = os.path.join(base_path, self.results_file)
+                    if os.path.exists(file_name):
+                        os.remove(file_name)
+                    np.save(file_name, np.array(rewards))
+                if self.reward_shaper:
+                    self.reward_shaper.save_cache()
+
+
+            i += 1
 
     def next_episode(self):
         """Steps through a single episode and calculates what is needed to
         perform PPO update
         """
+
         observation_dict, _ = self.env.reset()
         observation = torch.Tensor(observation_dict["image"].flatten()).to(self.device)
+        env_reward = 0
+        advisor_reward_cum = 0
 
         for step in range(self.args["steps"]):
             self.observations[step] = observation
@@ -91,6 +120,9 @@ class PPO:
             observation_dict, reward, done, truncated, info = self.env.step(
                 action.cpu().numpy()
             )
+            env_reward += reward
+            advisor_reward_cum += advisor_reward
+
 
             self.rewards[step] = reward + advisor_reward
 
@@ -102,7 +134,9 @@ class PPO:
                 break
 
         if self.reward_shaper:
-            self.reward_shaper.reset_cache()
+            pass
+            self.reward_shaper.caption_set = set()
+            # self.reward_shaper.reset_cache()
 
         # Now that the agent has played out an episode, it's time
         # to backtrack all steps, and compute the discounted rewards
@@ -120,6 +154,7 @@ class PPO:
             #     torch.zeros_like(self.returns),
             # )
             # print(f"{self.advantages=}")
+        return env_reward, advisor_reward_cum
 
 
     def PPO_update(self):
@@ -229,6 +264,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", False, False)
+    ppo = PPO("hyperparams.json", llama_reward=True, results_file="doorkey_big_llm")
     # save_params(self.self.args)
     ppo.train()

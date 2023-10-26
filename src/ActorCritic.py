@@ -113,6 +113,8 @@ class Agent(nn.Module):
 
         probs = Categorical(logits=logits)
 
+        # print(probs.probs)
+
         if action is None:
             action = probs.sample()
         return (
