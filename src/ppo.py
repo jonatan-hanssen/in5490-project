@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 base_path = os.path.dirname(__file__)
 print(base_path)
+#torch.autograd.set_detect_anomaly(True)
 
 class PPO:
     def __init__(self, param_file, llama_policy=False, llama_reward=False, results_file=None):
