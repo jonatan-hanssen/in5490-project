@@ -97,7 +97,7 @@ class llama2_base:
             },
         ]
 
-    def suggest(self, observation):
+    def suggest(self, observation, show_pos=False):
         """Creates a list of suggested actions based on the current observation
 
         Args:
@@ -107,7 +107,7 @@ class llama2_base:
             A list of strings of suggested actions by the LLM. Also sets self.suggestions
 
         """
-        observation = obs_to_string(observation, False, False)
+        observation = obs_to_string(observation, show_pos, False)
 
         observation = f"My goal is: {self.goal}. {observation}"
 
@@ -288,9 +288,48 @@ class llama2_policy(llama2_base):
             goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file
         )
 
+        self.dialog = [
+            {
+                "role": "system",
+                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the environment, and you should give a list of suggested actions that the player should take to reach their goal. The suggested actions should involve the objects mentioned. The player can pick up items, drop items and use items. You should not make assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should explore more. Separate each suggestion with a new line. Be concise.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: pick up the purple box. I see a red key 2 squares LEFT and 3 squares FORWARD and a locked red door 2 squares RIGHT and 3 squares FORWARD. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "Go FORWARD 3 squares then LEFT 2 squares. \nPick up the key.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: open the purple door. I see a red key 2 squares LEFT and 3 squares FORWARD, an open red door 2 squares RIGHT and 3 squares FORWARD, a purple key 3 squares LEFT, a locked purple door 2 squares RIGHT, and a green key 1 square RIGHT and 1 square FORWARD. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "Move LEFT 3 squares. \nPick up the key.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: open the purple door. I see a green key 1 square and a locked green door. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "You should turn around to see more.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: open the purple door. I see a locked purple door 2 squares FORWARD and have a purple key in my inventory. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "Move 2 squares FORWARD. \nUnlock the door with the key.",
+            },
+        ]
+
     def give_values(self, observation):
         # this sets self.suggestions
-        self.suggest(observation)
+        self.suggest(observation, show_pos=True)
 
         # give cosine similarities for all possible actions over a certain threshold
         return torch.tensor([self.compare(action, observation) for action in range(7)])
