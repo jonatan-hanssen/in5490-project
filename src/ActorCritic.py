@@ -98,13 +98,13 @@ class Agent(nn.Module):
                     # its flattened so we need to make it normal again
                     unflat_obs = torch.tensor(single_obs.reshape((7, 7, 3)).to(torch.int64))
                     # this stores suggested actions
-                    self.consigliere.suggest(unflat_obs)
+                    # self.consigliere.suggest(unflat_obs)
                     # compares all possible actions to suggestions
                     advisor_values_list.append(self.consigliere.give_values(unflat_obs))
                 advisor_values = torch.stack(advisor_values_list)
             else:
                 unflat_obs = torch.tensor(observation.reshape((7, 7, 3)).to(torch.int64))
-                self.consigliere.suggest(unflat_obs)
+                #self.consigliere.suggest(unflat_obs)
                 advisor_values = self.consigliere.give_values(unflat_obs)
 
 
