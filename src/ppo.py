@@ -264,6 +264,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", llama_reward=True, results_file="doorkey_big_llm")
+    ppo = PPO("hyperparams.json", llama_reward=False, llama_policy=True, results_file="doorkey_big_llm")
     # save_params(self.self.args)
     ppo.train()
