@@ -54,9 +54,10 @@ class llama2_base:
             if os.path.exists(self.cache_file):
                 with open(self.cache_file) as file:
                     self.cache = json.load(file)
+            else:
+                self.cache = dict()
         else:
             self.cache = dict()
-
         self.caption_set = set()
 
         self.dialog = [

@@ -92,26 +92,27 @@ class Agent(nn.Module):
         if self.consigliere:
             #print(observation.shape)
             #logits = torch.nn.functional.softmax(logits, dim=-1)
+            #logits /= torch.norm(logits)
             if len(observation.shape) == 2:
                 advisor_values_list = list()
                 for single_obs in observation:
                     # its flattened so we need to make it normal again
-                    unflat_obs = torch.tensor(single_obs.reshape((7, 7, 3)).to(torch.int64))
+                    unflat_obs = single_obs.reshape((7, 7, 3)).to(torch.int64)
                     # this stores suggested actions
                     # self.consigliere.suggest(unflat_obs)
                     # compares all possible actions to suggestions
                     advisor_values_list.append(self.consigliere.give_values(np.array(unflat_obs.cpu())))
                 advisor_values = torch.stack(advisor_values_list)
             else:
-                unflat_obs = torch.tensor(observation.reshape((7, 7, 3)).to(torch.int64))
+                unflat_obs = observation.reshape((7, 7, 3)).to(torch.int64)
                 #self.consigliere.suggest(unflat_obs)
                 advisor_values = self.consigliere.give_values(np.array(unflat_obs.cpu()))
 
 
             # anti adrian propaganda
-            # logits += advisor_values
+            logits += advisor_values
             # adrian good vote adrian
-            logits *= advisor_values
+            # logits *= advisor_values
 
         probs = Categorical(logits=logits)
 
