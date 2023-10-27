@@ -71,6 +71,9 @@ class PPO:
             #     continue
             print(f"Env reward: {env_reward}")
             print(f"LLM reward: {advisor_reward_cum}")
+            if self.reward_shaper:
+                print(f"Cache misses={self.reward_shaper.cache_misses}")
+                self.reward_shaper.cache_misses = 0
             self.PPO_update()  # Use values stored to backpropagate using PPO
             self.reset_memory()  # Restore
 
