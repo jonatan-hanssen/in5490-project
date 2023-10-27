@@ -12,6 +12,8 @@
 \begin{document}
 
 \title{Large Language Models in Reinforcement Learning - A Comparison of Methods}
+\thispagestyle{plain}
+\pagestyle{plain}
 
 \author{\IEEEauthorblockN{Adrian Duric}
 \IEEEauthorblockA{\textit{Master Student, Dept. of Informatics} \\
@@ -92,11 +94,17 @@ In this case, the LLM is integrated as part of the PPO algorithm, directly influ
 
 The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM. This may be done at every timestep, or after some interval of timesteps. In addition to the state observation, the LLM is also asked to respond with a list of recommendations. These recommendations can be proposed actions for the agent to perform, or goal states that the agent should reach. The agent then acts independently of the LLM for one or more timesteps, as dictated by the baseline RL algorithm it is trained with. As it does so, its actions are tracked and encoded to natural text. Alternatively, a new state observation is generated after the timesteps, and also encoded as natural text. Then, the LLM is used as a tool for semantic similarity comparison, comparing either its own formerly proposed actions to the actions performed by the agent, or comparing its proposed goal state to the new state reached by the agent. Finally, high semantic similarity gives an additional reward which is implemented in the reward function of the agent. 
 
+\subsection{Large Language Model used}
+
+The LLM that is used is Meta's Llama2 \cite{llama}, which is an open source language model. We use the smallest model size, which has 7 billion parameters.
+
 \section{Experiments}
+
+We perform experiments to compare different methods of integrating LLMs with the PPO algorithm, specifically comparing their ability to guide the early exploration of an RL model in a reward-sparse environment.
 
 \subsection{Minigrid Environments}
 
-Minigrid is a library containing simple grid world environments. An important characteristic of all these environments is that they only give reward on the completion of the goal of the environment. In other words, the environment only ever gives out a single reward per episode, at the end of the episode. Goals in minigrid are often simple tasks, such as "unlock the door", "go to the goal", "pick up the red chest". Completing these goals often requires the completion of subtasks; going to the goal might require opening a door, and opening the door might require picking up a key. These environments are partially observable, which means that the agent only receives a seven by seven observation grid, not the entire grid. Figure \ref{doorkeyenv}, shows a typical minigrid environment. In this case, the agent (the red arrow) only sees the left room, and does not know where the goal is.
+For our experiments, we choose the Minigrid library. The Minigrid library contains simple grid world environments. An important characteristic of all these environments is that they only give reward on the completion of the goal of the environment. In other words, the environment only ever gives out a single reward per episode, at the end of the episode. Goals in minigrid are often simple tasks, such as "unlock the door", "go to the goal", "pick up the red chest". Completing these goals often requires the completion of subtasks; going to the goal might require opening a door, and opening the door might require picking up a key. These environments are partially observable, which means that the agent only receives a seven by seven observation grid, not the entire grid. Figure \ref{doorkeyenv}, shows a typical minigrid environment. In this case, the agent (the red arrow) only sees the left room, and does not know where the goal is.
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/doorkeyenv.png}}
@@ -104,11 +112,32 @@ Minigrid is a library containing simple grid world environments. An important ch
 \label{doorkeyenv}
 \end{figure}
 
+A more complicated environment can be seen in figure \ref{blockedunlockpickupenv}. Completing the goal requires picking up the ball and dropping it somewhere else, picking up the key, using it to unlock the door, dropping the key (the agent can only carry one item at once) and finally picking up the box. With no intermediate rewards, this is a very difficult task for traditional RL methods. The exact configuration of Minigrid environments is random; the position of the agent, the placement of the walls and items within the grid all vary from episode to episode.
 
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/blockedunlockpickupenv.png}}
+\caption{The Minigrid BlockedUnlockPickup environment}
+\label{blockedunlockpickupenv}
+\end{figure}
 
+Some environments can only be effectively solved by relying on language (for example, environments where the goal text describes a specific object to be picked up, which changes every time), while others can be solved without (for example, if the goal always is to pick up a key). We only use environments that can be solved without language, so that the baseline PPO algorithm is not at an unfair disadvantage.
 
+\subsection{Our chosen environments}
+
+We select NUMBER different Minigrid environments; DoorKey, Unlock, CRAZYENV. Example instances of these environments can be found in the appendix. For each environment we test our three different models; PPO with no LLM integration, PPO with LLM reward shaping and PPO with LLM policy integration. All methods use the same hyperparameters for the PPO, which can be found the appendix. For each of these methods, we run PPO for 2000 episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM} received for each one. We do this eight times per method, and compare the average results against eachother.
 
 \section{Results}
+
+\subsection{DoorKey environment}
+
+As we can see from figure \ref{doorkeyresults}, LLM integration gives a noticable improvement to the performance of the model, not just in the early stages of training, but throughout the entire training process. Averaging over all episodes of all eight runs per model, we find that LLM reward shaping receives $24\%$ more reward per episode than PPO trained without LLM rewards. Furthermore, this is an improvement that comes at very little computational cost, because LLM responses can be cached between runs. Of the eight runs on this environment using LLM reward shaping, the last three runs never queried the LLM at all, only relying on the cache of previous answers. In all methods, we see that the variance is very large ($0.28$ and $0.31$ for LLM reward shaping and baseline, respectively). Given that there is no reward given for a partially completed task, this is not unexpected.
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/doorkeyresults.png}}
+\caption{Reward per episode for the three (two) different methods in the DoorKey environment}
+\label{doorkeyresults}
+\end{figure}
+
 
 \section{Conclusion}
 
@@ -137,5 +166,7 @@ I would like to acknowledge myself for being a absolute legend.
 
 
 \section*{Appendix}
+
+
 
 \end{document}
