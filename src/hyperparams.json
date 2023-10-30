@@ -8,8 +8,10 @@
     "clip_epsilon":0.2,
     "value_loss_coef":0.30,
     "entropy_coef":0.0,
-    "env_name":"MiniGrid-DoorKey-8x8-v0",
+    "env_name":"MiniGrid-Empty-16x16-v0",
     "lr":3.0e-4,
     "epochs":10,
+    "llama_reward":false,
+    "llama_policy":false,
 	"standarization":false
 }

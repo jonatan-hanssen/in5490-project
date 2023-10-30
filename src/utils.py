@@ -46,6 +46,7 @@ class llama2_base:
         self.goal = goal
 
         self.cache_file = cache_file
+        self.cache_misses = 0
 
         if self.cache_file:
             self.cache_file = os.path.join(base_path, cache_file)
@@ -53,9 +54,10 @@ class llama2_base:
             if os.path.exists(self.cache_file):
                 with open(self.cache_file) as file:
                     self.cache = json.load(file)
+            else:
+                self.cache = dict()
         else:
             self.cache = dict()
-
         self.caption_set = set()
 
         self.dialog = [
@@ -119,6 +121,7 @@ class llama2_base:
 
         else:
             # print("Cache miss")
+            self.cache_misses += 1
             result = self.generator.chat_completion(
                 [self.dialog],  # type: ignore
                 max_gen_len=100,

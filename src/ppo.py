@@ -17,7 +17,7 @@ print(base_path)
 #torch.autograd.set_detect_anomaly(True)
 
 class PPO:
-    def __init__(self, param_file, llama_policy=False, llama_reward=False, results_file=None):
+    def __init__(self, param_file, results_file=None):
         self.args = read_params(param_file)
         seeding(self.args["seed"])
 
@@ -29,7 +29,7 @@ class PPO:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.device = torch.device("cpu")
-        self.agent = Agent(self.env, llama_policy).to(self.device)
+        self.agent = Agent(self.env, self.args["llama_policy"]).to(self.device)
         self.optimizer = optim.Adam(
             self.agent.parameters(), lr=self.args["lr"], eps=1e-8
         )
@@ -37,7 +37,7 @@ class PPO:
 
         self.reward_shaper = (
             llama2_reward_shaper(self.env.reset()[0]["mission"], similarity_modifier=0.005, cos_sim_threshold=0.84, cache_file="llm_cache.json")
-            if llama_reward
+            if self.args["llama_reward"]
             else None
         )
 
@@ -71,6 +71,12 @@ class PPO:
             #     continue
             print(f"Env reward: {env_reward}")
             print(f"LLM reward: {advisor_reward_cum}")
+            if self.reward_shaper:
+                print(f"Cache misses: {self.reward_shaper.cache_misses}")
+                self.reward_shaper.cache_misses = 0
+            if self.agent.consigliere:
+                print(f"Cache misses: {self.agent.consigliere.cache_misses}")
+                self.agent.consigliere.cache_misses = 0
             self.PPO_update()  # Use values stored to backpropagate using PPO
             self.reset_memory()  # Restore
 
@@ -138,6 +144,7 @@ class PPO:
             pass
             self.reward_shaper.caption_set = set()
             # self.reward_shaper.reset_cache()
+
 
         # Now that the agent has played out an episode, it's time
         # to backtrack all steps, and compute the discounted rewards
@@ -265,6 +272,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", llama_reward=False, llama_policy=True, results_file="doorkey_big_llm")
+    ppo = PPO("hyperparams.json", results_file="doorkey_big_llm")
     # save_params(self.self.args)
     ppo.train()
