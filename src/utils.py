@@ -210,22 +210,22 @@ def caption_action(action, obs_matrix):
 
     ###  Captioning action based on cell and inventory ###
 
-    caption = "do nothing"
+    caption = "do nothing."
 
     if action == "done":
-        caption = "mark the game as completed"
+        caption = "mark the game as completed."
 
     if action == "forward":
         if front_item == "empty":
-            caption = "move forward"
+            caption = "move forward."
         elif front_item == "door" and front_state == " open":
-            caption = "move forward"
+            caption = "move forward."
 
     if action == "right":
-        caption = "turn right"
+        caption = "turn right."
 
     if action == "left":
-        caption = "turn left"
+        caption = "turn left."
 
     if action == "pick":
         if front_cell[0] < 4:  # nothing to pick up
@@ -235,7 +235,7 @@ def caption_action(action, obs_matrix):
             pass
 
         else:
-            caption = f"pick up{front_state} {front_color} {front_item}"
+            caption = f"pick up{front_state} {front_color} {front_item}."
 
     elif action == "drop":
         if inventory[0] < 4:  # nothing to drop
@@ -245,17 +245,19 @@ def caption_action(action, obs_matrix):
             pass
 
         else:
-            caption = f"drop{inventory_state} {inventory_color} {inventory_item}"
+            caption = f"drop{inventory_state} {inventory_color} {inventory_item}."
 
     elif action == "toggle":
         if front_item == "box":
-            caption = f"destroy {front_color} box"
+            caption = f"destroy {front_color} box."
         else:
             if front_cell[0] >= 4:
                 caption = f"use{front_state} {front_color} {front_item}"
 
             if inventory[0] > 3:
                 caption += f" with{inventory_state} {inventory_color} {inventory_item}"
+            
+            caption += "."
 
     return caption
 
@@ -302,7 +304,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "assistant",
-                "content": "Go FORWARD 3 squares then LEFT 2 squares. \nPick up the key.",
+                "content": "move forward. \nturn left.",
             },
             {
                 "role": "user",
@@ -310,7 +312,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "assistant",
-                "content": "Move LEFT 3 squares. \nPick up the key.",
+                "content": "turn left.",
             },
             {
                 "role": "user",
@@ -318,16 +320,33 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "assistant",
-                "content": "You should turn around to see more.",
+                "content": "turn left. \nturn right.",
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a locked purple door 2 squares FORWARD and have a purple key in my inventory. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a locked purple door 1 square FORWARD and have a purple key in my inventory. What actions do you suggest?",
             },
             {
                 "role": "assistant",
-                "content": "Move 2 squares FORWARD. \nUnlock the door with the key.",
+                "content": "use locked purple door with purple key.",
             },
+            {
+                "role": "user",
+                "content": "My goal is: open the green door. I see a locked green door 3 squares FORWARD and have a purple key in my inventory. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "drop purple key.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: open the red door. I see a locked red door 3 squares RIGHT and 2 squares FORWARD and a red key 1 square FORWARD. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "pick up purple key.",
+            },
+
         ]
 
     def give_values(self, observation):
