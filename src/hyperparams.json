@@ -1,5 +1,5 @@
 {
-    "rollouts":2000,
+    "rollouts":300,
     "steps":1024,
     "seed":42069,
     "gamma":0.99,
@@ -13,7 +13,5 @@
     "epochs":10,
     "llama_reward":false,
     "llama_policy":true,
-	"standarization":false,
-	"adrianmode":false
-
+	"standarization":false
 }

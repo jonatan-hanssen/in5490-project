@@ -100,7 +100,7 @@ class PPO:
         perform PPO update
         """
 
-        print("Entered next_episode()")
+        # print("Entered next_episode()")
         observation_dict, _ = self.env.reset()
         observation = torch.Tensor(observation_dict["image"].flatten()).to(self.device)
         env_reward = 0
@@ -170,7 +170,7 @@ class PPO:
 
     def PPO_update(self):
 
-        print("Entered PPO_update()")
+        # print("Entered PPO_update()")
         for epoch in range(self.args["epochs"]):
             for values in self.minibatch_generator():
                 (
@@ -277,6 +277,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", results_file="doorkey_big_llm")
+    ppo = PPO("hyperparams.json", results_file="data/empty_big_llm3")
     # save_params(self.self.args)
     ppo.train()
