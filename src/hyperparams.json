@@ -1,5 +1,5 @@
 {
-    "rollouts":2000,
+    "rollouts":300,
     "steps":1024,
     "gamma":0.99,
     "num_minibatches":8,
