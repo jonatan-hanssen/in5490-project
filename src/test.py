@@ -7,13 +7,14 @@ import torch
 from utils import caption_action
 
 
-env = gym.make("MiniGrid-UnlockPickup-v0", render_mode="human")
+env = gym.make("MiniGrid-KeyCorridorS3R2-v0", render_mode="human")
 
 
 obs, dog = env.reset()
 print(obs)
 obs = obs["image"]
 observation = env.step(1)[0]["image"]
+time.sleep(100)
 stringy = [[f"{cell[0]}{cell[1]}{cell[2]}" for cell in row] for row in observation]
 for row in stringy:
     print(row)
@@ -29,4 +30,3 @@ for row in stringy:
     print(row)
 
 print(caption_action(1, observation))
-env.close()
