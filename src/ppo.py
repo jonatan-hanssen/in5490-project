@@ -277,6 +277,6 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", results_file="data/empty_big_llm3")
+    ppo = PPO("hyperparams.json", results_file="data/doorkey_big_policy1")
     # save_params(self.self.args)
     ppo.train()
