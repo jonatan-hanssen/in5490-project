@@ -12,6 +12,8 @@
     "lr":3.0e-4,
     "epochs":10,
     "llama_reward":false,
-    "llama_policy":false,
-	"standarization":false
+    "llama_policy":true,
+	"standarization":false,
+	"adrianmode":false
+
 }

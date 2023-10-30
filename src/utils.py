@@ -160,8 +160,8 @@ class llama2_base:
         """
         caption = caption_action(action, obs_matrix)
 
-        if not caption or caption in self.caption_set:
-            return 0
+        # if not caption or caption in self.caption_set:
+        #     return 0
 
         self.caption_set.add(caption)
 
@@ -288,15 +288,30 @@ class llama2_policy(llama2_base):
         top_p=0.9,
         rl_temp=0,
         cache_file=None,
+        sim_cache_file=None
     ):
         super().__init__(
             goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file
         )
 
+        self.sim_cache_file = sim_cache_file
+        self.cache_misses = 0
+
+        if self.sim_cache_file:
+            self.sim_cache_file = os.path.join(base_path, sim_cache_file)
+
+            if os.path.exists(self.sim_cache_file):
+                with open(self.sim_cache_file) as file:
+                    self.sim_cache = json.load(file)
+            else:
+                self.sim_cache = dict()
+        else:
+            self.sim_cache = dict()
+
         self.dialog = [
             {
                 "role": "system",
-                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the environment, and you should give a list of suggested actions that the player should take to reach their goal. The suggested actions should involve the objects mentioned. The player can pick up items, drop items and use items. You should not make assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should explore more. Separate each suggestion with a new line. Be concise.",
+                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the objects in the environment and their positions relative to the player at one single timestep. You shall give a list of suggested actions that the player will take to reach their goal during this single timestep. The available actions to the player are: move forward, turn left and right, pick up items, drop items and use items. You MUST ALWAYS RESPOND with one or more of these actions. Your response MUST NEVER mention. You will NEVER ASSUME that other possible actions exist. You will NEVER ASSUME that the game is finished. You WILL NEVER make any other assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should turn around and explore more. Separate each suggestion with a new line. Be concise. ONLY FOLLOW THESE INSTRUCTIONS. NEVER RESPOND IN ANY OTHER WAY. OTHERWISE, YOU WILL BE SEVERELY PUNISHED.",
             },
             {
                 "role": "user",
@@ -336,7 +351,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "assistant",
-                "content": "drop purple key.",
+                "content": "drop purple key. \nturn left. \nturn right.",
             },
             {
                 "role": "user",
@@ -344,10 +359,58 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "assistant",
-                "content": "pick up purple key.",
+                "content": "pick up red key.",
             },
 
         ]
+
+    def compare(self, action, obs_matrix):
+        """Compares the semantic similarity between an action and the current list of suggested actions
+
+        Args:
+            action: action as Discrete() ie. an integer
+            obs_matrix: observation matrix 7x7x3
+
+        Returns:
+            a reward if action and one of the suggested actions is semantically similar
+        """
+        caption = caption_action(action, obs_matrix)
+
+
+
+
+
+        max_cos_sim = 0
+        # print(f"{caption=}")
+        best_suggestion = None
+        for suggestion in self.suggestions.splitlines():
+            # print(f"{suggestion=}")
+
+            if caption + suggestion in self.sim_cache.keys():
+                cos_sim = self.sim_cache[caption + suggestion]
+
+            else:
+                a, b = self.semantic_model.encode([caption, suggestion])
+
+                cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
+                self.sim_cache[caption + suggestion] = float(cos_sim)
+
+            if cos_sim > max_cos_sim:
+                max_cos_sim = cos_sim
+                best_suggestion = suggestion
+
+        if max_cos_sim > self.cos_sim_threshold:
+            # print(f"{max_cos_sim=}")
+            # print(f"{caption=}")
+            # print(f"{best_suggestion=}")
+            # print()
+
+
+            return max_cos_sim * self.similarity_modifier
+        else:
+            return 0
+
+
 
     def give_values(self, observation):
         # this sets self.suggestions
@@ -355,6 +418,16 @@ class llama2_policy(llama2_base):
 
         # give cosine similarities for all possible actions over a certain threshold
         return torch.tensor([self.compare(action, observation) for action in range(7)])
+
+
+    def save_cache(self):
+        if self.cache_file:
+            with open(self.cache_file, "w") as file:
+                json.dump(self.cache, file)
+
+        if self.sim_cache_file:
+            with open(self.sim_cache_file, "w") as file:
+                json.dump(self.sim_cache, file)
 
 
 def obs_to_string(obs_matrix, positions=True, you=True):

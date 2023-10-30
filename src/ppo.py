@@ -89,6 +89,8 @@ class PPO:
                     np.save(file_name, np.array(rewards))
                 if self.reward_shaper:
                     self.reward_shaper.save_cache()
+                if self.agent.consigliere:
+                    self.agent.consigliere.save_cache()
 
 
             i += 1
@@ -98,6 +100,7 @@ class PPO:
         perform PPO update
         """
 
+        print("Entered next_episode()")
         observation_dict, _ = self.env.reset()
         observation = torch.Tensor(observation_dict["image"].flatten()).to(self.device)
         env_reward = 0
@@ -166,6 +169,8 @@ class PPO:
 
 
     def PPO_update(self):
+
+        print("Entered PPO_update()")
         for epoch in range(self.args["epochs"]):
             for values in self.minibatch_generator():
                 (

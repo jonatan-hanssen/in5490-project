@@ -70,7 +70,7 @@ class Agent(nn.Module):
         )
 
         goal = env.reset()[0]["mission"]
-        self.consigliere = llama2_policy(goal) if llama else None
+        self.consigliere = llama2_policy(goal, cos_sim_threshold=0, similarity_modifier=0.1, cache_file="policy_cache.json", sim_cache_file="policy_sim_cache.json") if llama else None
 
         # Yet to be integrated -> shall serve as the second actor
         # self.LM_actor = llama2_7b_policy()
@@ -108,8 +108,9 @@ class Agent(nn.Module):
                 #self.consigliere.suggest(unflat_obs)
                 advisor_values = self.consigliere.give_values(np.array(unflat_obs.cpu()))
 
-
-            # anti adrian propaganda
+            # print(f"{logits=}")
+            # print(f"{advisor_values=}")
+            # # anti adrian propaganda
             logits += advisor_values
             # adrian good vote adrian
             # logits *= advisor_values
