@@ -1,9 +1,7 @@
 {
     "rollouts":2000,
     "steps":1024,
-    "seed":42069,
     "gamma":0.99,
-    "gae_lambda":0.95,
     "num_minibatches":8,
     "clip_epsilon":0.2,
     "value_loss_coef":0.30,
@@ -12,8 +10,5 @@
     "lr":3.0e-4,
     "epochs":10,
     "llama_reward":false,
-    "llama_policy":true,
-	"standarization":false,
-	"adrianmode":false
-
+    "llama_policy":false
 }

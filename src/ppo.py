@@ -13,13 +13,11 @@ import json
 import matplotlib.pyplot as plt
 
 base_path = os.path.dirname(__file__)
-print(base_path)
-#torch.autograd.set_detect_anomaly(True)
+
 
 class PPO:
     def __init__(self, param_file, results_file=None):
         self.args = read_params(param_file)
-        seeding(self.args["seed"])
 
         self.results_file = results_file
 
@@ -36,7 +34,12 @@ class PPO:
         self.obs_shape = int(np.array(self.env.observation_space["image"].shape).prod())
 
         self.reward_shaper = (
-            llama2_reward_shaper(self.env.reset()[0]["mission"], similarity_modifier=0.005, cos_sim_threshold=0.84, cache_file="llm_cache.json")
+            llama2_reward_shaper(
+                self.env.reset()[0]["mission"],
+                similarity_modifier=0.005,
+                cos_sim_threshold=0.84,
+                cache_file="llm_cache.json",
+            )
             if self.args["llama_reward"]
             else None
         )
@@ -64,7 +67,10 @@ class PPO:
         i = 0
         for rollout in range(self.args["rollouts"]):
             print(f"Rollout num: {rollout}")
-            env_reward, advisor_reward_cum = self.next_episode()  # Perform steps and store relevant values
+            (
+                env_reward,
+                advisor_reward_cum,
+            ) = self.next_episode()  # Perform steps and store relevant values
             rewards.append(env_reward)
             # if not env_reward:
             #     print("No reward received, skipping update of networks")
@@ -91,7 +97,6 @@ class PPO:
                     self.reward_shaper.save_cache()
                 if self.agent.consigliere:
                     self.agent.consigliere.save_cache()
-
 
             i += 1
 
@@ -133,7 +138,6 @@ class PPO:
             env_reward += reward
             advisor_reward_cum += advisor_reward
 
-
             self.rewards[step] = reward + advisor_reward
 
             observation = torch.Tensor(observation_dict["image"].flatten()).to(
@@ -147,7 +151,6 @@ class PPO:
             pass
             self.reward_shaper.caption_set = set()
             # self.reward_shaper.reset_cache()
-
 
         # Now that the agent has played out an episode, it's time
         # to backtrack all steps, and compute the discounted rewards
@@ -167,9 +170,7 @@ class PPO:
             # print(f"{self.advantages=}")
         return env_reward, advisor_reward_cum
 
-
     def PPO_update(self):
-
         print("Entered PPO_update()")
         for epoch in range(self.args["epochs"]):
             for values in self.minibatch_generator():
