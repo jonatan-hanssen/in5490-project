@@ -11,15 +11,19 @@ from ActorCritic import *
 from utils import *
 import json
 import matplotlib.pyplot as plt
+import argparse
 
 base_path = os.path.dirname(__file__)
 
 
 class PPO:
-    def __init__(self, param_file, results_file=None):
+    def __init__(self, param_file, result_file=None, reward=None, policy=None):
         self.args = read_params(param_file)
 
-        self.results_file = results_file
+        # these arguments can overwrite the file if set
+        self.results_file = self.args["results_file"] if not result_file else result_file
+        self.llama_policy = self.args["llama_policy"] if not policy else policy
+        self.llama_reward = self.args["llama_reward"] if not reward else reward
 
         self.env = gym.make(
             self.args["env_name"], render_mode="rgb_array", max_steps=self.args["steps"]
@@ -27,7 +31,7 @@ class PPO:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.device = torch.device("cpu")
-        self.agent = Agent(self.env, self.args["llama_policy"]).to(self.device)
+        self.agent = Agent(self.env, self.llama_policy).to(self.device)
         self.optimizer = optim.Adam(
             self.agent.parameters(), lr=self.args["lr"], eps=1e-8
         )
@@ -38,9 +42,8 @@ class PPO:
                 self.env.reset()[0]["mission"],
                 similarity_modifier=0.005,
                 cos_sim_threshold=0.84,
-                cache_file="llm_cache.json",
             )
-            if self.args["llama_reward"]
+            if self.llama_reward
             else None
         )
 
@@ -148,7 +151,6 @@ class PPO:
                 break
 
         if self.reward_shaper:
-            pass
             self.reward_shaper.caption_set = set()
             # self.reward_shaper.reset_cache()
 
@@ -277,6 +279,12 @@ class PPO:
 
 
 if __name__ == "__main__":
-    ppo = PPO("hyperparams.json", results_file="data/doorkey_big_policy1")
-    # save_params(self.self.args)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--result_file", type=str, help="Output file for env rewards")
+    parser.add_argument("-r", "--reward", type=bool, help="Use LLM reward shaping")
+    parser.add_argument("-p", "--policy", type=bool, help="Use LLM policy")
+    args = parser.parse_args()
+    print(args)
+
+    ppo = PPO("hyperparams.json", result_file=args.result_file, reward=args.reward, policy=args.policy)
     ppo.train()
