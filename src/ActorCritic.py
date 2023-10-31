@@ -49,7 +49,7 @@ class Agent(nn.Module):
         the agent is in.
     """
 
-    def __init__(self, env, llama=False):
+    def __init__(self, env, llama=False, consigliere=None):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
             init_weightsNbias(nn.Linear(147 * 11, 64, dtype=torch.float64)),
@@ -70,7 +70,10 @@ class Agent(nn.Module):
         )
 
         goal = env.reset()[0]["mission"]
-        self.consigliere = llama2_policy(goal, cos_sim_threshold=0, similarity_modifier=0.1) if llama else None
+        print(goal)
+        if not consigliere:
+            self.consigliere = llama2_policy(goal, cos_sim_threshold=0, similarity_modifier=0.1) if llama else None
+        else self.consigliere = consigliere
 
 
     def get_value(self, observation):
