@@ -157,7 +157,6 @@ class llama2_base:
 
     def reset_cache(self):
         self.cache = dict()
-        self.sim_cache = dict()
 
     def save_cache(self):
         if self.cache_file:

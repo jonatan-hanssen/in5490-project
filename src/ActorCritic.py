@@ -70,10 +70,10 @@ class Agent(nn.Module):
         )
 
         goal = env.reset()[0]["mission"]
-        print(goal)
         if not consigliere:
             self.consigliere = llama2_policy(goal, cos_sim_threshold=0, similarity_modifier=0.1) if llama else None
-        else self.consigliere = consigliere
+        else:
+            self.consigliere = consigliere
 
 
     def get_value(self, observation):
