@@ -80,12 +80,15 @@ We train a PPO model in a Partially Observable Markov Decision Process (POMDP). 
 
 \subsection{Approach}
 
-To evaluate the effectivness of the integration of LLMs into reinfrocement learning algorithms, er use the \textbf{MiniGrid} and \textbf{BabyAI} libraries, we handpick specific environments with varying levels of complexity, to evaluate the effectivness of our proposed techniques against a standard proximal policy optimzation agent and each other. The environments are all based in a small sized grid-world, where the agent is surrounded by walls, and has to perform some form of task to complete the game. How difficult an environment is to beat, depends no factors such as shape of the walls, if the agent has to solve subtasks to finish the game, and the type of subtasks encountered. Moreover what makes these environments exceptionally well suited for testing our approach, is that they are sparse in that the agent will only receive a reward when it finishes the game. It is a well known fact that even the PPO algorithm struggles in very complex and sparse environments, hence it becomes the perfect arena to see if the high generalization capabilites of Large pre-trained Language Models will lead to better results than using only RL methods.
+To evaluate the effectivness of the integration of LLMs into reinfrocement learning algorithms, we use the \textbf{MiniGrid} and \textbf{BabyAI} libraries. Here, we handpick specific environments with varying levels of complexity, to evaluate the effectivness of our proposed techniques against a standard Actor-Critic \ref{Proximal policy optimzation}, and against each other. The environments selected are all based in a small sized grid-world, where the agent is surrounded by walls, and has to perform at least one task to complete the game. How difficult an environment is to beat, depends no factors such as shape of the walls, if the agent has to solve subtasks to finish the game, and the type of subtasks encountered. Moreover what makes these environments exceptionally well suited for testing our approach, is that they are sparse, in the context of MiniGrid and BabyAI, this means that the agent will only receive a reward when it finishes the game. It is a well known fact that even the state-of-art RL algorithms struggle in very complex and sparse environments, hence it becomes the perfect arena to see if the high generalization capabilites of Large pre-trained Language Models will lead to better results than using only RL methods.
 
 
 \subsubsection{Standard Proximal Policy Optimization}
 
-A standard PPO algorithm with no LLM integration, as a baseline. In this case, we use StableBaselines' implementation with the following hyperparameters: HYPERPARAMETERS HERE.
+Our baseline is the \textbf{Proximal Policy Optimization} (PPO), which over the last years has established itself as the state-of-art approach to solving reinforcement learning problems. The main idea behind this algorithms is that the new policy is clipped so that it does not move too quickly and too far from the old policy. I.e. the new policy cannot diverge too moch from the old policy, which leads to exceedingly large updates to policy gradients being avoided, thus also avoiding the problem of vanishing and exploding gradients. Suprisingly, this has elevated the ability of RL-techniques to tackle sparse environments, and outperform older approches such as DQN. For a more detailed discussion of the mathematics and implementation details, see \cite{OpenAIPPO}
+
+For the implementation details of our PPO and the hyperparameters used, take a look at Appendix X.X.
+
 
 \subsubsection{PPO with LLM Integrated in the Policy Function}
 
@@ -97,7 +100,10 @@ The agent is trained as in the baseline. The agent's state observation is encode
 
 \subsection{Large Language Model used}
 
-The LLM that is used is Meta's Llama2 \cite{llama}, which is an open source language model. We use the smallest model size, which has 7 billion parameters.
+For the purpose of our research, we have decided utilize a LLM from the open-source family of language models LLaMA developed by Meta AI, released starting Febraury, 2023. Specifically, we chose the newest of the models named Llama2 \cite{llama}, which has been trained using 40\% more data than its predecessor Llama1, and according to \cite{meta} has double the context length. In the experiments presented below, we use the smallest version of Llama2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect of having to call the API-version. The reason for not using any of the larger Llama2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
+
+Many research papers nowadays propose fine-tuning of LLMs as means of leveraging the capabilites of the language models for decision-making purposes even further. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, is is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
+
 
 \section{Experiments}
 
@@ -141,6 +147,8 @@ As we can see from figure \ref{doorkeyresults}, LLM integration gives a noticabl
 
 
 \section{Conclusion}
+
+It works man, dogski did it!
 
 \section*{Ethics Statement}
 
