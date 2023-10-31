@@ -80,7 +80,8 @@ We train a PPO model in a Partially Observable Markov Decision Process (POMDP). 
 
 \subsection{Approach}
 
-Using this environment, we explore three different ways of training the agent. We evaluate these models on the same Minigrid environments and compare their performance against each other.\\
+To evaluate the effectivness of the integration of LLMs into reinfrocement learning algorithms, er use the \textbf{MiniGrid} and \textbf{BabyAI} libraries, we handpick specific environments with varying levels of complexity, to evaluate the effectivness of our proposed techniques against a standard proximal policy optimzation agent and each other. The environments are all based in a small sized grid-world, where the agent is surrounded by walls, and has to perform some form of task to complete the game. How difficult an environment is to beat, depends no factors such as shape of the walls, if the agent has to solve subtasks to finish the game, and the type of subtasks encountered. Moreover what makes these environments exceptionally well suited for testing our approach, is that they are sparse in that the agent will only receive a reward when it finishes the game. It is a well known fact that even the PPO algorithm struggles in very complex and sparse environments, hence it becomes the perfect arena to see if the high generalization capabilites of Large pre-trained Language Models will lead to better results than using only RL methods.
+
 
 \subsubsection{Standard Proximal Policy Optimization}
 
