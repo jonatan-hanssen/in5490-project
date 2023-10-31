@@ -22,3 +22,6 @@
 env/
 __pycache__/
 llama-2-7b-chat/
+
+*.pt
+*_cache.json
