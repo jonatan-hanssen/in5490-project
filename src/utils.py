@@ -23,7 +23,8 @@ class llama2_base:
         temperature=0.6,
         top_p=0.9,
         rl_temp=0,
-        cache_file="llm_cache.json",
+        cache_file=None,
+        sim_cache_file=None,
     ):
         self.generator = Llama.build(
             ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
@@ -59,6 +60,20 @@ class llama2_base:
         else:
             self.cache = dict()
         self.caption_set = set()
+
+        self.sim_cache_file = sim_cache_file
+        self.cache_misses = 0
+
+        if self.sim_cache_file:
+            self.sim_cache_file = os.path.join(base_path, sim_cache_file)
+
+            if os.path.exists(self.sim_cache_file):
+                with open(self.sim_cache_file) as file:
+                    self.sim_cache = json.load(file)
+            else:
+                self.sim_cache = dict()
+        else:
+            self.sim_cache = dict()
 
         self.dialog = [
             {
@@ -142,11 +157,16 @@ class llama2_base:
 
     def reset_cache(self):
         self.cache = dict()
+        self.sim_cache = dict()
 
     def save_cache(self):
         if self.cache_file:
             with open(self.cache_file, "w") as file:
                 json.dump(self.cache, file)
+
+        if self.sim_cache_file:
+            with open(self.sim_cache_file, "w") as file:
+                json.dump(self.sim_cache, file)
 
     def compare(self, action, obs_matrix):
         """Compares the semantic similarity between an action and the current list of suggested actions
@@ -160,8 +180,8 @@ class llama2_base:
         """
         caption = caption_action(action, obs_matrix)
 
-        # if not caption or caption in self.caption_set:
-        #     return 0
+        if not caption or caption in self.caption_set:
+            return 0
 
         self.caption_set.add(caption)
 
@@ -169,10 +189,15 @@ class llama2_base:
         # print(f"{caption=}")
         best_suggestion = None
         for suggestion in self.suggestions.splitlines():
-            # print(f"{suggestion=}")
-            a, b = self.semantic_model.encode([caption, suggestion])
 
-            cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
+            if caption + suggestion in self.sim_cache.keys():
+                cos_sim = self.sim_cache[caption + suggestion]
+
+            else:
+                a, b = self.semantic_model.encode([caption, suggestion])
+
+                cos_sim = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
+                self.sim_cache[caption + suggestion] = float(cos_sim)
 
             if cos_sim > max_cos_sim:
                 max_cos_sim = cos_sim
@@ -271,10 +296,11 @@ class llama2_reward_shaper(llama2_base):
         temperature=0.6,
         top_p=0.9,
         rl_temp=0,
-        cache_file=None,
+        cache_file="cache_reward.json",
+        sim_cache_file="sim_cache_reward.json",
     ):
         super().__init__(
-            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file
+            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file, sim_cache_file
         )
 
 
@@ -287,26 +313,12 @@ class llama2_policy(llama2_base):
         temperature=0.6,
         top_p=0.9,
         rl_temp=0,
-        cache_file=None,
-        sim_cache_file=None
+        cache_file="cache_policy.json",
+        sim_cache_file="sim_cache_policy.json",
     ):
         super().__init__(
-            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file
+            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file, sim_cache_file
         )
-
-        self.sim_cache_file = sim_cache_file
-        self.cache_misses = 0
-
-        if self.sim_cache_file:
-            self.sim_cache_file = os.path.join(base_path, sim_cache_file)
-
-            if os.path.exists(self.sim_cache_file):
-                with open(self.sim_cache_file) as file:
-                    self.sim_cache = json.load(file)
-            else:
-                self.sim_cache = dict()
-        else:
-            self.sim_cache = dict()
 
         self.dialog = [
             {
