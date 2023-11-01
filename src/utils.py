@@ -477,10 +477,10 @@ def obs_to_string(obs_matrix, positions=True, you=True):
             string = f"see a{state} {color} {item}"
 
             if positions:
-                if rel_y == 0:
+                if rel_x == 0:
                     longitude = ""
 
-                elif rel_y > 0:
+                elif rel_x > 0:
                     # longitude = f"{rel_y} square{'s' if rel_y != 1 else ''} RIGHT"
                     longitude = "RIGHT"
 
@@ -490,7 +490,7 @@ def obs_to_string(obs_matrix, positions=True, you=True):
                     # )
                     longitude = "LEFT"
 
-                if rel_x == 0:
+                if rel_y == 0:
                     latitude = ""
 
                 else:
