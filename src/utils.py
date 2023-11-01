@@ -362,7 +362,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a locked purple door FORWARD and have a purple key in my inventory. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a locked purple door directly in front and have a purple key in my inventory. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -370,7 +370,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a locked purple door FORWARD. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a locked purple door directly in front. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -386,7 +386,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the red door. I see a locked red door RIGHT and FORWARD and a red key FORWARD. What actions do you suggest?",
+                "content": "My goal is: open the red door. I see a locked red door FORWARD and a red key directly in front. What actions do you suggest?",
             },
             {
                 "role": "assistant",

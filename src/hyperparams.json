@@ -1,5 +1,5 @@
 {
-    "rollouts":300,
+    "rollouts":2000,
     "steps":1024,
     "gamma":0.99,
     "num_minibatches":8,
@@ -10,6 +10,6 @@
     "epochs":10,
     "llama_reward":false,
     "llama_policy":true,
-    "env_name":"MiniGrid-Empty-16x16-v0",
+    "env_name":"MiniGrid-DoorKey-8x8-v0",
     "results_file": "data/unlockpickup5"
 }

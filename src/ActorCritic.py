@@ -71,7 +71,7 @@ class Agent(nn.Module):
 
         goal = env.reset()[0]["mission"]
         if not consigliere:
-            self.consigliere = llama2_policy(goal, cos_sim_threshold=0, similarity_modifier=0.1) if llama else None
+            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=0.1) if llama else None
         else:
             self.consigliere = consigliere
 
@@ -92,8 +92,7 @@ class Agent(nn.Module):
 
         if self.consigliere:
             #print(observation.shape)
-            #logits = torch.nn.functional.softmax(logits, dim=-1)
-            #logits /= torch.norm(logits)
+            # logits /= torch.norm(logits)
             if len(observation.shape) == 2:
                 advisor_values_list = list()
                 for single_obs in observation:
@@ -112,7 +111,7 @@ class Agent(nn.Module):
             # print(f"{logits=}")
             # print(f"{advisor_values=}")
             # # anti adrian propaganda
-            logits += advisor_values
+            # logits += advisor_values
             # adrian good vote adrian
             # logits *= advisor_values
 
@@ -121,7 +120,12 @@ class Agent(nn.Module):
         # print(probs.probs)
 
         if action is None:
-            action = probs.sample()
+            if self.consigliere:
+                newprobs = torch.nn.functional.softmax(probs.probs + advisor_values, dim=-1)
+                newprobs = Categorical(logits=logits)
+                action = newprobs.sample()
+            else:
+                action = probs.sample()
         return (
             action,
             probs.log_prob(action),
