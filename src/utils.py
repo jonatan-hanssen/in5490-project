@@ -232,22 +232,22 @@ def caption_action(action, obs_matrix):
 
     ###  Captioning action based on cell and inventory ###
 
-    caption = "do nothing."
+    caption = "do nothing"
 
     if action == "done":
-        caption = "mark the game as completed."
+        caption = "mark the game as completed"
 
     if action == "forward":
         if front_item == "empty":
-            caption = "move forward."
+            caption = "move forward"
         elif front_item == "door" and front_state == " open":
-            caption = "move forward."
+            caption = "move forward"
 
     if action == "right":
-        caption = "turn right."
+        caption = "turn right"
 
     if action == "left":
-        caption = "turn left."
+        caption = "turn left"
 
     if action == "pick":
         if front_cell[0] < 4:  # nothing to pick up
@@ -257,7 +257,7 @@ def caption_action(action, obs_matrix):
             pass
 
         else:
-            caption = f"pick up{front_state} {front_color} {front_item}."
+            caption = f"pick up{front_state} {front_color} {front_item}"
 
     elif action == "drop":
         if inventory[0] < 4:  # nothing to drop
@@ -267,19 +267,19 @@ def caption_action(action, obs_matrix):
             pass
 
         else:
-            caption = f"drop{inventory_state} {inventory_color} {inventory_item}."
+            caption = f"drop{inventory_state} {inventory_color} {inventory_item}"
 
     elif action == "toggle":
         if front_item == "box":
-            caption = f"destroy {front_color} box."
+            caption = f"destroy {front_color} box"
         else:
             if front_cell[0] >= 4:
                 caption = f"use{front_state} {front_color} {front_item}"
 
             if inventory[0] > 3:
                 caption += f" with{inventory_state} {inventory_color} {inventory_item}"
-
-            caption += "."
+            
+    caption += "."
 
     return caption
 
@@ -334,11 +334,11 @@ class llama2_policy(llama2_base):
         self.dialog = [
             {
                 "role": "system",
-                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the objects in the environment and their positions relative to the player at one single timestep. You shall give a list of suggested actions that the player will take to reach their goal during this single timestep. The available actions to the player are: move forward, turn left and right, pick up items, drop items and use items. You MUST ALWAYS RESPOND with one or more of these actions. Your response MUST ALWAYS follow the template of the given example responses. NEVER ADD anything not in the example responses. You will NEVER ASSUME that other possible actions exist. You will NEVER ASSUME that the game is finished. You WILL NEVER make any other assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should turn around and explore more. Separate each suggestion with a new line. Be concise. ONLY FOLLOW THESE INSTRUCTIONS. NEVER RESPOND IN ANY OTHER WAY. OTHERWISE, YOU WILL BE SEVERELY PUNISHED.",
+                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the objects in the environment and their positions relative to the player at one single timestep. You shall give a list of suggested actions that the player will take to reach their goal during this single timestep. RESPOND WITH THE FOLLOWING ACTIONS: 'move forward.', 'turn left.', 'turn right.', 'pick up <item>.', 'drop <item>.', 'use <item>.'.",
             },
             {
                 "role": "user",
-                "content": "My goal is: pick up the purple box. I see a red key 2 squares LEFT and 3 squares FORWARD and a locked red door 2 squares RIGHT and 3 squares FORWARD. What actions do you suggest?",
+                "content": "My goal is: pick up the purple box. I see a red key LEFT and FORWARD and a locked red door RIGHT and FORWARD. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -346,7 +346,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a red key 2 squares LEFT and 3 squares FORWARD, an open red door 2 squares RIGHT and 3 squares FORWARD, a purple key 3 squares LEFT, a locked purple door 2 squares RIGHT, and a green key 1 square RIGHT and 1 square FORWARD. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a red key LEFT and FORWARD, an open red door RIGHT and FORWARD, a purple key LEFT, a locked purple door RIGHT, and a green key RIGHT and FORWARD. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -354,7 +354,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a green key 1 square and a locked green door. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a green key FORWARD and a locked green door FORWARD. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -362,7 +362,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a locked purple door 1 square FORWARD and have a purple key in my inventory. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a locked purple door FORWARD and have a purple key in my inventory. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -370,7 +370,15 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the green door. I see a locked green door 3 squares FORWARD and have a purple key in my inventory. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a locked purple door FORWARD. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "turn left. \nturn right.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: open the green door. I see a locked green door FORWARD and have a purple key in my inventory. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -378,7 +386,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the red door. I see a locked red door 3 squares RIGHT and 2 squares FORWARD and a red key 1 square FORWARD. What actions do you suggest?",
+                "content": "My goal is: open the red door. I see a locked red door RIGHT and FORWARD and a red key FORWARD. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -473,20 +481,23 @@ def obs_to_string(obs_matrix, positions=True, you=True):
                     longitude = ""
 
                 elif rel_y > 0:
-                    longitude = f"{rel_y} square{'s' if rel_y != 1 else ''} RIGHT"
+                    # longitude = f"{rel_y} square{'s' if rel_y != 1 else ''} RIGHT"
+                    longitude = "RIGHT"
 
                 else:
-                    longitude = (
-                        f"{abs(rel_y)} square{'s' if abs(rel_y) != 1 else ''} LEFT"
-                    )
+                    # longitude = (
+                    #     f"{abs(rel_y)} square{'s' if abs(rel_y) != 1 else ''} LEFT"
+                    # )
+                    longitude = "LEFT"
 
                 if rel_x == 0:
                     latitude = ""
 
                 else:
-                    latitude = (
-                        f"{abs(rel_x)} square{'s' if abs(rel_x) != 1 else ''} FORWARD"
-                    )
+                    # latitude = (
+                    #     f"{abs(rel_x)} square{'s' if abs(rel_x) != 1 else ''} FORWARD"
+                    # )
+                    latitude = "FORWARD"
 
                 if longitude and latitude:
                     string += f" {longitude} and {latitude}"
