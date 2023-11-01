@@ -130,7 +130,6 @@ class llama2_base:
 
         self.dialog.append({"role": "user", "content": observation})
 
-
         if observation in self.cache.keys():
             answer = self.cache[observation]
 
@@ -188,7 +187,6 @@ class llama2_base:
         # print(f"{caption=}")
         best_suggestion = None
         for suggestion in self.suggestions.splitlines():
-
             if caption + suggestion in self.sim_cache.keys():
                 cos_sim = self.sim_cache[caption + suggestion]
 
@@ -280,7 +278,7 @@ def caption_action(action, obs_matrix):
 
             if inventory[0] > 3:
                 caption += f" with{inventory_state} {inventory_color} {inventory_item}"
-            
+
             caption += "."
 
     return caption
@@ -299,7 +297,14 @@ class llama2_reward_shaper(llama2_base):
         sim_cache_file="sim_cache_reward.json",
     ):
         super().__init__(
-            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file, sim_cache_file
+            goal,
+            cos_sim_threshold,
+            similarity_modifier,
+            temperature,
+            top_p,
+            rl_temp,
+            cache_file,
+            sim_cache_file,
         )
 
 
@@ -316,7 +321,14 @@ class llama2_policy(llama2_base):
         sim_cache_file="sim_cache_policy.json",
     ):
         super().__init__(
-            goal, cos_sim_threshold, similarity_modifier, temperature, top_p, rl_temp, cache_file, sim_cache_file
+            goal,
+            cos_sim_threshold,
+            similarity_modifier,
+            temperature,
+            top_p,
+            rl_temp,
+            cache_file,
+            sim_cache_file,
         )
 
         self.dialog = [
@@ -372,7 +384,6 @@ class llama2_policy(llama2_base):
                 "role": "assistant",
                 "content": "pick up red key.",
             },
-
         ]
 
     def compare(self, action, obs_matrix):
@@ -386,10 +397,6 @@ class llama2_policy(llama2_base):
             a reward if action and one of the suggested actions is semantically similar
         """
         caption = caption_action(action, obs_matrix)
-
-
-
-
 
         max_cos_sim = 0
         # print(f"{caption=}")
@@ -416,12 +423,9 @@ class llama2_policy(llama2_base):
             # print(f"{best_suggestion=}")
             # print()
 
-
             return max_cos_sim * self.similarity_modifier
         else:
             return 0
-
-
 
     def give_values(self, observation):
         # this sets self.suggestions
@@ -429,7 +433,6 @@ class llama2_policy(llama2_base):
 
         # give cosine similarities for all possible actions over a certain threshold
         return torch.tensor([self.compare(action, observation) for action in range(7)])
-
 
     def save_cache(self):
         if self.cache_file:
@@ -446,7 +449,7 @@ def obs_to_string(obs_matrix, positions=True, you=True):
     for i in range(len(obs_matrix)):
         for j in range(len(obs_matrix[i])):
             cell = obs_matrix[i][j]
-            
+
             if cell[0] < 4:
                 continue
 
@@ -466,23 +469,23 @@ def obs_to_string(obs_matrix, positions=True, you=True):
             string = f"see a{state} {color} {item}"
 
             if positions:
-                if rel_x == 0:
+                if rel_y == 0:
                     longitude = ""
 
-                elif rel_x > 0:
-                    longitude = f"{rel_x} square{'s' if rel_x != 1 else ''} RIGHT"
+                elif rel_y > 0:
+                    longitude = f"{rel_y} square{'s' if rel_y != 1 else ''} RIGHT"
 
                 else:
                     longitude = (
-                        f"{abs(rel_x)} square{'s' if abs(rel_x) != 1 else ''} LEFT"
+                        f"{abs(rel_y)} square{'s' if abs(rel_y) != 1 else ''} LEFT"
                     )
 
-                if rel_y == 0:
+                if rel_x == 0:
                     latitude = ""
 
                 else:
                     latitude = (
-                        f"{abs(rel_y)} square{'s' if abs(rel_y) != 1 else ''} FORWARD"
+                        f"{abs(rel_x)} square{'s' if abs(rel_x) != 1 else ''} FORWARD"
                     )
 
                 if longitude and latitude:
@@ -510,7 +513,7 @@ def seeding(seed):
 
 
 def read_params(params_file):
-    file = open(os.path.join(base_path,params_file))
+    file = open(os.path.join(base_path, params_file))
     params = json.load(file)
     # print(json.dumps(params, indent=4, separators=(":", ",")))
     return params
