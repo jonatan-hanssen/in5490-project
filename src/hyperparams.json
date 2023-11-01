@@ -1,5 +1,5 @@
 {
-    "rollouts":2000,
+    "rollouts":300,
     "steps":1024,
     "gamma":0.99,
     "num_minibatches":8,
@@ -9,7 +9,7 @@
     "lr":3.0e-4,
     "epochs":10,
     "llama_reward":false,
-    "llama_policy":false,
-    "env_name":"MiniGrid-UnlockPickup-v0",
+    "llama_policy":true,
+    "env_name":"MiniGrid-Empty-16x16-v0",
     "results_file": "data/unlockpickup5"
 }
