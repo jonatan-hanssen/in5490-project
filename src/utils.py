@@ -278,7 +278,7 @@ def caption_action(action, obs_matrix):
 
             if inventory[0] > 3:
                 caption += f" with{inventory_state} {inventory_color} {inventory_item}"
-            
+
     caption += "."
 
     return caption
@@ -506,7 +506,10 @@ def obs_to_string(obs_matrix, positions=True, you=True):
                     string += f" {longitude}"
 
                 elif not longitude and latitude:
-                    string += f" {latitude}"
+                    if rel_y == -1:
+                        string += " directly in front"
+                    else:
+                        string += f" {latitude}"
 
             observation_strings.append(string)
 
