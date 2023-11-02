@@ -79,7 +79,7 @@ class PPO:
             (
                 env_reward,
                 advisor_reward_cum,
-            ) = self.next_episode()  # Perform steps and store relevant values
+            ) = self.next_episode(rollout)  # Perform steps and store relevant values
             rewards.append(env_reward)
             # if not env_reward:
             #     print("No reward received, skipping update of networks")
@@ -109,7 +109,7 @@ class PPO:
 
             i += 1
 
-    def next_episode(self):
+    def next_episode(self, rollout):
         """Steps through a single episode and calculates what is needed to
         perform PPO update
         """
@@ -124,7 +124,7 @@ class PPO:
             self.observations[step] = observation
 
             with torch.no_grad():
-                action, logprob, _, value = self.agent.get_action_and_value(observation)
+                action, logprob, _, value = self.agent.get_action_and_value(observation, rollout=rollout)
 
             self.values[step] = value.flatten()
             self.actions[step] = action

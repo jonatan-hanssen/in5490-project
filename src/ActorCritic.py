@@ -71,7 +71,7 @@ class Agent(nn.Module):
 
         goal = env.reset()[0]["mission"]
         if not consigliere:
-            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=0.3) if llama else None
+            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=1) if llama else None
         else:
             self.consigliere = consigliere
 
@@ -82,7 +82,7 @@ class Agent(nn.Module):
         ).flatten()
         return self.critic(observation.to(torch.float64))
 
-    def get_action_and_value(self, observation, action=None):
+    def get_action_and_value(self, observation, action=None, rollout=None):
         observation_onehot = (
             nn.functional.one_hot(observation.to(torch.int64), num_classes=11)
             .to(torch.float64)
@@ -106,7 +106,7 @@ class Agent(nn.Module):
             else:
                 unflat_obs = observation.reshape((7, 7, 3)).to(torch.int64)
                 #self.consigliere.suggest(unflat_obs)
-                advisor_values = torch.tensor(self.consigliere.give_values(np.array(unflat_obs.cpu())), dtype=torch.float64)
+                advisor_values = self.consigliere.give_values(np.array(unflat_obs.cpu())).to(torch.float64)
 
             # print(f"{logits=}")
             # print(f"{advisor_values=}")
@@ -124,12 +124,17 @@ class Agent(nn.Module):
                 if torch.norm(advisor_values) == 0:
                     action = probs.sample()
                 else:
+                    anneal = ((500 - rollout) / 500) ** 2 if rollout else 1
+                    if anneal < 0:
+                        anneal = 0
+                    # print(anneal)
                     scale_factor = (torch.norm(logits) / torch.norm(advisor_values))
                     # print(f"{advisor_values=}")
                     # print(f"{scale_factor=}")
                     # print(f"{advisor_values * scale_factor=}")
                     # print(f"{logits=}")
-                    newprobs = Categorical(logits=logits + advisor_values * scale_factor)
+                    advisor_values = advisor_values.to(torch.device("cuda"))
+                    newprobs = Categorical(logits=logits + advisor_values * scale_factor * anneal)
                     action = newprobs.sample()
                     # print(f"{probs.probs=}")
                     # print(f"{newprobs.probs=}")
