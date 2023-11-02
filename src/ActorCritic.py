@@ -71,7 +71,7 @@ class Agent(nn.Module):
 
         goal = env.reset()[0]["mission"]
         if not consigliere:
-            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=0.1) if llama else None
+            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=0.3) if llama else None
         else:
             self.consigliere = consigliere
 
@@ -106,7 +106,7 @@ class Agent(nn.Module):
             else:
                 unflat_obs = observation.reshape((7, 7, 3)).to(torch.int64)
                 #self.consigliere.suggest(unflat_obs)
-                advisor_values = self.consigliere.give_values(np.array(unflat_obs.cpu()))
+                advisor_values = torch.tensor(self.consigliere.give_values(np.array(unflat_obs.cpu())), dtype=torch.float64)
 
             # print(f"{logits=}")
             # print(f"{advisor_values=}")
@@ -121,9 +121,18 @@ class Agent(nn.Module):
 
         if action is None:
             if self.consigliere:
-                newprobs = torch.nn.functional.softmax(probs.probs + advisor_values, dim=-1)
-                newprobs = Categorical(logits=logits)
-                action = newprobs.sample()
+                if torch.norm(advisor_values) == 0:
+                    action = probs.sample()
+                else:
+                    scale_factor = (torch.norm(logits) / torch.norm(advisor_values))
+                    # print(f"{advisor_values=}")
+                    # print(f"{scale_factor=}")
+                    # print(f"{advisor_values * scale_factor=}")
+                    # print(f"{logits=}")
+                    newprobs = Categorical(logits=logits + advisor_values * scale_factor)
+                    action = newprobs.sample()
+                    # print(f"{probs.probs=}")
+                    # print(f"{newprobs.probs=}")
             else:
                 action = probs.sample()
         return (

@@ -179,7 +179,7 @@ class llama2_base:
         caption = caption_action(action, obs_matrix)
 
         if not caption or caption in self.caption_set:
-            return 0
+            return 0.0
 
         self.caption_set.add(caption)
 
@@ -208,7 +208,7 @@ class llama2_base:
 
             return max_cos_sim * self.similarity_modifier
         else:
-            return 0
+            return 0.0
 
 
 def caption_action(action, obs_matrix):

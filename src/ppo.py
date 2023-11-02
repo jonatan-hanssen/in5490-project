@@ -26,8 +26,8 @@ class PPO:
         self.results_file = (
             self.args["results_file"] if not result_file else result_file
         )
-        self.llama_policy = self.args["llama_policy"] if not policy else policy
-        self.llama_reward = self.args["llama_reward"] if not reward else reward
+        self.llama_policy = self.args["llama_policy"] if policy is None else policy
+        self.llama_reward = self.args["llama_reward"] if reward is None else reward
 
         self.env = gym.make(
             self.args["env_name"], render_mode="rgb_array", max_steps=self.args["steps"]
@@ -287,10 +287,10 @@ class PPO:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-f", "--result_file", type=str, help="Output file for env rewards"
+        "-f", "--result_file", type=str, help="Output file for env rewards", default=None
     )
-    parser.add_argument("-r", "--reward", type=bool, help="Use LLM reward shaping")
-    parser.add_argument("-p", "--policy", type=bool, help="Use LLM policy")
+    parser.add_argument("-r", "--reward", type=bool, help="Use LLM reward shaping", default=None)
+    parser.add_argument("-p", "--policy", type=bool, help="Use LLM policy", default=None)
     args = parser.parse_args()
     print(args)
 
