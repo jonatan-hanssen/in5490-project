@@ -124,9 +124,13 @@ class Agent(nn.Module):
                 if torch.norm(advisor_values) == 0:
                     action = probs.sample()
                 else:
-                    anneal = ((500 - rollout) / 500) ** 2 if rollout else 1
-                    if anneal < 0:
-                        anneal = 0
+                    max_rollout = 500
+                    if rollout:
+                        anneal = ((max_rollout - rollout) / max_rollout) ** 2
+                        if rollout > max_rollout:
+                            anneal = 0
+                    else:
+                        anneal = 1
                     # print(anneal)
                     scale_factor = (torch.norm(logits) / torch.norm(advisor_values))
                     # print(f"{advisor_values=}")
