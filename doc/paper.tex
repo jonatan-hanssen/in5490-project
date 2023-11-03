@@ -82,12 +82,12 @@ We train a PPO model in a Partially Observable Markov Decision Process (POMDP). 
 
 \subsection{Approach}
 
-To evaluate the effectiveness of the integration of LLMs into Reinforcement Learning algorithms, we use the \textbf{MiniGrid} and \textbf{BabyAI} libraries. Here, we handpick specific environments with varying levels of complexity, to evaluate the effectiveness of our proposed techniques against a standard Actor-Critic \ref{Proximal policy optimzation}, and against each other. The environments selected are all based in a small sized grid-world, where the agent is surrounded by walls, and has to perform at least one task to complete the game. How difficult an environment is to beat depends on factors such as the shape of the walls, whether the agent has to solve subtasks to finish the game, and the types of subtasks encountered. Moreover, what makes these environments especially well suited for testing our approach is that they are sparse in the context of MiniGrid and BabyAI. This means that the agent will only receive a reward when it finishes the game. It is a well known fact that even state-of-art RL algorithms struggle in very complex and sparse environments. Therefore, it becomes the perfect arena to see if the high generalization capabilites of pre-trained Large Language Models will lead to better results than using only RL methods.
+To evaluate the effectiveness of the integration of LLMs into Reinforcement Learning algorithms, we use the MiniGrid library. Here, we handpick specific environments with varying levels of complexity, to evaluate the effectiveness of our proposed techniques against a standard Actor-Critic PPO, and against each other. % The environments selected are all based in a small sized grid-world, where the agent is surrounded by walls, and has to perform at least one task to complete the game. How difficult an environment is to beat depends on factors such as the shape of the walls, whether the agent has to solve subtasks to finish the game, and the types of subtasks encountered. Moreover, what makes these environments especially well suited for testing our approach is that they are sparse in the context of MiniGrid and BabyAI. This means that the agent will only receive a reward when it finishes the game. It is a well known fact that even state-of-art RL algorithms struggle in very complex and sparse environments. Therefore, it becomes the perfect arena to see if the high generalization capabilites of pre-trained Large Language Models will lead to better results than using only RL methods.
 
 
 \subsubsection{Standard Proximal Policy Optimization}
 
-Our baseline is the \textbf{Proximal Policy Optimization} (PPO) algorithm, which has been established as a state-of-art approach to solving reinforcement learning problems over the last few years. The main idea behind this algorithm is that the new policy is clipped so that it does not move too quickly and too far from the old policy, i.e. the new policy cannot diverge too much from the old policy. This helps to avoid exceedingly large updates to policy gradients, thus also avoiding the problem of vanishing and exploding gradients. This has elevated the ability of RL-techniques to tackle sparse environments, and outperform older approches such as DQN. For a more detailed discussion of the mathematics and implementation details, see \cite{OpenAIPPO}
+Our baseline is the PPO algorithm, which is a policy gradient method that has been established as a state-of-art approach to solving reinforcement learning problems over the last few years. The main idea behind this algorithm is that the new policy is clipped so that it does not move too quickly and too far from the old policy, which helps to avoid changing the policy too drastically during the update. With this simple concept, PPO has outperformed previous methods such as Deep-Q Networks and A2C, while being relatively simple to implement\cite{ppo}.
 
 For the implementation details of our PPO and the hyperparameters used, take a look at Appendix X.X.
 
@@ -98,18 +98,22 @@ In this case, the LLM is integrated as part of the PPO algorithm, directly influ
 
 \subsubsection{PPO with LLM Integrated in the Reward Function}
 
-The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM. This may be done at every timestep, or after some interval of timesteps. In addition to the state observation, the LLM is also asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, the LLM is used as a tool for semantic similarity comparison, comparing its own formerly proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional reward which is implemented in the reward function of the agent. 
+The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM. This may be done at every timestep, or after some interval of timesteps. In addition to the state observation, the LLM is also asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, the LLM is used as a tool for semantic similarity comparison, comparing its own formerly proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards.
 
-\subsection{Large Language Model used}
+\subsection{Language Models}
 
-For the purpose of our research, we have decided utilize a LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we chose the newest of the models named Llama 2 \cite{llama}, which has been trained using 40\% more data than its predecessor Llama 1, and according to \cite{meta} has double the context length. In the experiments presented below, we use the smallest version of Llama2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect of having to call the API-version. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
+In both these cases, we need two language models; one to generate the suggestions and one to generate semantic similarity values. For text generation, we have decided utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we chose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
 
-Many research papers nowadays propose fine-tuning of LLMs as means of leveraging the capabilites of the language models for decision-making purposes even further. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, is is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
+Some research papers propose fine-tuning of LLMs as means of leveraging the capabilites of the language models for decision-making purposes even further \cite{grounding}. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, is is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
+
+Instead of fine tuning the LLM, we use few-shot learning when prompting, giving the LLM a few examples of observations and correct corresponding action recommendations. This is an effective way to guide the LLM for our specific purposes without requiring us to retrain the entire network.
+
+For generating semantic similarity values, we use Sentence-Bert \cite{bert} for generating encoding vectors, and perform a cosine similarity calculation of the two sentence encodings. This gives a value between $-1$ and $1$, where two sentences with the exact same encoding have a cosine similarity of $1$.
 
 
 \section{Experiments}
 
-We perform experiments to compare different methods of integrating LLMs with the PPO algorithm, specifically comparing their ability to guide the early exploration of an RL model in a reward-sparse environment.
+We perform experiments to compare different methods of integrating LLMs with the PPO algorithm, specifically comparing their ability to guide the early exploration of an RL model in a reward-sparse environment. Even state-of-art RL algorithms may struggle in such environments. Therefore, it is the perfect arena to see if the high generalization capabilites of pre-trained Large Language Models will lead to better results over using only RL methods.
 
 \subsection{Minigrid Environments}
 
@@ -133,9 +137,37 @@ Some environments can only be effectively solved by relying on language (for exa
 
 \subsection{Our chosen environments}
 
-We select NUMBER different Minigrid environments; DoorKey, OTHERENV, OTHERENV. Example instances of these environments can be found in the appendix. For each environment we test our three different models; PPO with no LLM integration, PPO with LLM reward shaping and PPO with LLM policy optimization ***CONSIDER ALSO TESTING REWARD SHAPER + CONSIGLIERE TOGETHER***. All methods use the same hyperparameters for the PPO, which can be found in the appendix. For each of these methods, we run PPO for 2000 episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results against each other.
+We select three different Minigrid environments with increasing complexity; Empty, DoorKey and UnlockPickup. For each environment we test our three different models; PPO with no LLM integration, PPO with LLM reward shaping and PPO with LLM policy influencing. All methods use the same hyperparameters for the PPO, which can be found in the appendix. For each of these methods, we run PPO for 2000 (200 for Empty) episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results per episode against each other.
+
+\subsection{Empty Environment}
+
+This environment is the simplest possible, consisting of an empty room with a single goal in the bottom right corner. This environment contains no stochasticity; the agent and goal always start in the same positions. Despite its simplicity, there is still potential for LLM integration to improve the early phases of training, because the room is 15 by 15 tiles, which means that receiving any reward requires a significant amount of exploration. The environment is seen in figure \ref{emptyenv}.
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/emptyenv.png}}
+\caption{The Minigrid Empty Environment}
+\label{emptyenv}
+\end{figure}
+
+\subsubsection{DoorKey environment}
+
+This environment consists of two rooms separated by a locked door. Fig \ref{doorkeyenv} shows an example configuration. The agent starts in one room, while the goal square is in the other. The agent must pick up a key in the starting room, and use it on the door to gain access to the room containing the goal. This environment thus contains two subgoals; picking up the key and using it to unlock the door.
+
+\subsubsection{UnlockPickup environment}
+
+This environment is quite similar to the DoorKey environment. Fig \ref{unlockpickupenv} shows an example configuration. The difference is that after unlocking the door, the agent must now pick up a chest instead of walking to a goal square. Because the agent can only hold one item at a time, this requires dropping the key on an empty square, which introduces another subtask. Chests can also be opened like doors, but this removes the chest from the game and thus causes and instant failure of the task, as it can no longer be picked up. Thus, the agent must learn that using a key on a door is a valuable subtask, while using it on a chest is a bad idea. This added complexity makes it a much more difficult task than the previous two.
 
 \section{Results}
+
+\subsection{Empty Environment}
+
+In this simple environment, we see that both LLM reward shaping and LLM policy influencing outperform the baseline model. Averaging over all episodes for all eight runs per model, we find LLM policy influencing to perform best, receiving $30\%$ more reward than the baseline. LLM reward shaping similarly outperforms the baseline, receiving $10\%$ more reward. Given that policy influencing is a more direct approach, it makes sense that this method performs best, as the simple environment makes it likely that the LLM will suggest the best action the majority of the time.
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/emptyresults.png}}
+\caption{Reward per episode for the three different methods in the Empty environment}
+\label{doorkeyresults}
+\end{figure}
 
 \subsection{DoorKey environment}
 
@@ -147,23 +179,31 @@ We also notice a significant performance increase when using LLM policy optimiza
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/doorkeyresults.png}}
-\caption{Reward per episode for the three (two) different methods in the DoorKey environment}
+\caption{Reward per episode for the three different methods in the DoorKey environment}
 \label{doorkeyresults}
 \end{figure}
 
 \subsection{Unlock Pickup environment}
 
-The Unlock Pickup environment is an even more complex environment than DoorKey, thus giving rewards to the agent even more sparsely. As may be anticipated, this added complexity to the state space makes the LLM contribution even more significant to the RL performance.
+The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity to the state space makes the LLM contribution even more significant to the RL performance.
 
-Compared to the baseline PPO when averaged per episode over all 8 runs, LLM reward shaping gave a NUMBER\% increase in reward from the environment, with a standard deviation of NUMBER (PPO alone had a standard deviation of NUMBER). LLM policy optimization gave a NUMBER\% increase compared to the PPO baseline and a NUMBER\% increase compared to reward shaping. Also here giving the highest average reward per episode, the combination of reward shaping and policy optimization gave NUMBER\% more reward compared to the PPO baseline, NUMBER\% more than reward shaping and NUMBER\% higher than policy optimization.
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/unlockpickupresults.png}}
+\caption{Reward per episode for the three different methods in the UnlockPickup environment}
+\label{unlockpickupresults}
+\end{figure}
+
+Looking at figure \ref{unlockpickupresults}, we can see that all methods struggle. However, we see that the LLM aided methods are faring much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given that terrible performance of the baseline, LLM reward shaping achieved a percentage increase of over $700\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0089$ (with a standard deviation of $0.015$), while LLM reward shaping achieved an average reward of $0.062$ (with a standard deviation of $0.081$).
+
+% LLM policy optimization gave a NUMBER\% increase compared to the PPO baseline and a NUMBER\% increase compared to reward shaping. 
 
 \section{Conclusion}
 
-It works man, dogski did it!
+As shown in the previously referenced work (\ref{background}), the integration of a Large Language Model into the Reinforcement Learning framework can improve model performance. In the Minigrid environments we have tested on, we have shown that LLM reward shaping gives increased performance across the board, which shows it to be a good candidate for reward shaping in many environments with sparse rewards. Our method of policy integration has not shown similar increases, giving lower rewards on average than the baseline.
 
-As shown in the previously referenced work (\ref{background}), the integration of a Large Language Model into the Reinforcement Learning framework can improve network performance. In the Minigrid environments we have tested on, DoorKey and Pickup Unlock, we have demonstrated so. This has been done both through the LLM shaping the RL reward function, and through the LLM influencing the action probabilities of the RL agent, as well as through combining these two methodologies.
+For the DoorKey environment, we found that LLM reward shaping gives a very significant $24\%$ increase in average rewards, aiding the agent in all stages of training. LLM policy influencing has sadly not given the same increase, underperforming in the more difficult environments.
 
-For the DoorKey environment, we found that all three methods surpassed the performance of our PPO baseline. 
+For the UnlockPickup environment, we find that all methods struggle to complete the goal, but that LLM-aided methods also here outperform vanilla PPO, achieving METRIC.
 
 \section*{Ethics Statement}
 
@@ -191,20 +231,12 @@ I would like to acknowledge myself for being a absolute legend.
 
 \section*{Appendix}
 
-% \begin{table*}[h]
-% \caption{PPO hyperparameters}
-% \begin{center}
-% \label{hyperparams}
-% \begin{tabular}{c | l l l l l l l l} 
-% % & & \\ % put some space after the caption
-% % \hline
-% Parameter & Gamma & Steps/episode & Epochs/episode & Batches/epoch & Clip & Value loss coeff. & Entropy coeff. & Learning rate \\
-% \hline
-% Value & 0.99 & 1024 & 10 & 8 & 0.2 & 0.3 & 0 & 3.0e-4 \\
-% \hline
-% \end{tabular}
-% \end{center}
-% \end{table*}
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/unlockpickupenv.png}}
+\caption{The Minigrid UnlockPickup environment}
+\label{unlockpickupenv}
+\end{figure}
+
 \begin{table*}[h]
 \caption{PPO hyperparameters}
 \begin{center}
