@@ -196,7 +196,9 @@ The Unlock Pickup environment is an even more complex environment than DoorKey, 
 \label{unlockpickupresults}
 \end{figure}
 
-Looking at figure \ref{unlockpickupresults}, we can see that all methods struggle. However, we see that the LLM aided methods are faring much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given that terrible performance of the baseline, LLM reward shaping achieved a percentage increase of over $700\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0089$ (with a standard deviation of $0.015$), while LLM reward shaping achieved an average reward of $0.062$ (with a standard deviation of $0.081$).
+Looking at figure \ref{unlockpickupresults}, we can see that all methods struggle. However, we see that the LLM reward shaping performs much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given that terrible performance of the baseline, LLM reward shaping achieved a percentage increase of over $700\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0089$ (with a standard deviation of $0.015$), while LLM reward shaping achieved an average reward of $0.062$ (with a standard deviation of $0.081$).
+
+{\it TODO: Add results from policy influencing}
 
 
 \section{Discussion, Future Work and Conclusion}
