@@ -362,7 +362,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a locked purple door directly in front and have a purple key in my inventory. What actions do you suggest?",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a locked purple door directly in front and have a purple key in my inventory. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -370,7 +370,7 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a locked purple door directly in front. What actions do you suggest?",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a locked purple door directly in front. What actions do you suggest?",
             },
             {
                 "role": "assistant",
@@ -386,11 +386,35 @@ class llama2_policy(llama2_base):
             },
             {
                 "role": "user",
-                "content": "My goal is: open the red door. I see a locked red door FORWARD and a red key directly in front. What actions do you suggest?",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a locked red door FORWARD and a red key directly in front. What actions do you suggest?",
             },
             {
                 "role": "assistant",
                 "content": "pick up red key.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a green goal directly in front. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "move forward.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a green goal RIGHT and a locked blue door directly in front and have a blue key in my inventory. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "turn right.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a green goal LEFT and a yellow key FORWARD and a locked yellow door FORWARD. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "turn left.",
             },
         ]
 
