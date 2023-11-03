@@ -124,7 +124,7 @@ class Agent(nn.Module):
                 if torch.norm(advisor_values) == 0:
                     action = probs.sample()
                 else:
-                    max_rollout = 500
+                    max_rollout = 600
                     if rollout:
                         anneal = ((max_rollout - rollout) / max_rollout) ** 2
                         if rollout > max_rollout:
@@ -138,7 +138,7 @@ class Agent(nn.Module):
                     # print(f"{advisor_values * scale_factor=}")
                     # print(f"{logits=}")
                     advisor_values = advisor_values.to(torch.device("cuda"))
-                    newprobs = Categorical(logits=logits + advisor_values * scale_factor * anneal)
+                    newprobs = Categorical(logits=logits + advisor_values * scale_factor * anneal * self.consigliere.similarity_modifier)
                     action = newprobs.sample()
                     # print(f"{probs.probs=}")
                     # print(f"{newprobs.probs=}")
