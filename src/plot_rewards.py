@@ -7,6 +7,7 @@ plt.rcParams.update({"font.size": 26})
 parser = argparse.ArgumentParser()
 
 parser.add_argument("environment")
+parser.add_argument("-w", "--window", type=int, default=20)
 args = parser.parse_args()
 
 
@@ -15,93 +16,79 @@ data_path = os.path.join(os.path.dirname(__file__), "data/")
 reward_data = list()
 policy_data = list()
 non_llm_data = list()
+both_data = list()
 
 for file in os.listdir(data_path):
     if not file.endswith(".npy"):
         continue
-    if not args.environment in file:
+    if not args.environment.lower() in file:
         continue
 
     data = np.load(os.path.join(data_path, file))
+    print(f"{file=}")
+    print(f"{len(data)=}")
 
     if "llm" in file or "reward" in file:
-        # print(file)
-        # print(f"reward {np.mean(data)=}")
         reward_data.append(data)
 
     elif "policy" in file:
-        print(f"policy {np.mean(data)=}")
         policy_data.append(data)
 
-    else:
-        # print(file)
-        # print(f"none {np.mean(data)=}")
+    elif "both" in file:
+        both_data.append(data)
+
+    elif len(file) < len(args.environment) + 6:
         non_llm_data.append(data)
+    print(f"{len(file)=}")
+    print(f"{len(args.environment)=}")
 
-reward_data = np.vstack(reward_data) if reward_data else np.zeros((1, 1991))
-policy_data = np.vstack(policy_data) if policy_data else np.zeros((1, 1991))
-non_llm_data = np.vstack(non_llm_data) if non_llm_data else np.zeros((1, 1991))
+DATA_SIZE = 191 if args.environment.lower() == "empty" else 1991
 
-mean_reward_data = np.mean(reward_data, axis=0)
-mean_policy_data = np.mean(policy_data, axis=0)
-mean_non_llm_data = np.mean(non_llm_data, axis=0)
+data_list = [reward_data, policy_data, both_data, non_llm_data]
+color_list = ["r", "g", "k", "b"]
+title_list = ["LLM reward shaping", "LLM policy influencing", "Both", "Baseline"]
 
-std_reward_data = np.std(reward_data, axis=0)
-std_policy_data = np.std(policy_data, axis=0)
-std_non_llm_data = np.std(non_llm_data, axis=0)
+means_list = list()
 
-print(f"Increase reward: {np.mean(mean_reward_data) / np.mean(non_llm_data)}")
-print(f"Increase policy: {np.mean(mean_policy_data) / np.mean(non_llm_data)}")
+for i in range(4):
+    print(f"Now calculating for: {title_list[i]}")
+    data = np.vstack(data_list[i]) if data_list[i] else np.zeros((1, DATA_SIZE))
+    mean = np.mean(data, axis=0)
+    std = np.std(data, axis=0)
 
+    rolling_mean = np.convolve(
+        np.pad(mean, args.window, mode="symmetric"),
+        np.ones(args.window) / args.window,
+        mode="same",
+    )[args.window : -args.window]
 
-window_size = 15
+    x = np.arange(len(rolling_mean))
+    means = np.array(mean)
+    print(f"Standard deviation: {np.mean(std)}")
+    print(f"Mean: {np.mean(mean)}")
+    print()
+    print("-" * 60)
+    print()
 
-means = list()
-stds = list()
-for window in np.array_split(mean_reward_data, len(mean_reward_data) // window_size):
-    means.append(np.mean(window))
+    means_list.append(np.mean(means))
 
-for window in np.array_split(std_reward_data, len(std_reward_data) // window_size):
-    stds.append(np.mean(window))
+    plt.plot(
+        x[:: args.window],
+        rolling_mean[:: args.window],
+        label=title_list[i],
+        color=color_list[i],
+        linewidth=3,
+    )
+    # plt.fill_between(
+    #     x, means - stds, means + stds, alpha=0.1, color=color_list[i], linewidth=4
+    # )
 
-x = np.arange(len(means)) * window_size
-means = np.array(means)
-stds = np.array(stds)
-print(f"Standard deviation reward: {np.mean(stds)}")
-
-plt.plot(x, means, label="LLM reward shaping", color="b", linewidth=3)
-plt.fill_between(x, means - stds, means + stds, alpha=0.1, color="b", linewidth=4)
-
-means = list()
-stds = list()
-for window in np.array_split(mean_non_llm_data, len(mean_non_llm_data) // window_size):
-    means.append(np.mean(window))
-
-for window in np.array_split(std_non_llm_data, len(std_non_llm_data) // window_size):
-    stds.append(np.mean(window))
-means = np.array(means)
-stds = np.array(stds)
-print(f"Standard deviation ppo: {np.mean(stds)}")
-
-plt.plot(x, means, label="No LLM reward shaping", color="r", linewidth=3)
-plt.fill_between(x, means - stds, means + stds, alpha=0.1, color="r", linewidth=4)
-
-means = list()
-stds = list()
-for window in np.array_split(mean_policy_data, len(mean_policy_data) // window_size):
-    means.append(np.mean(window))
-
-for window in np.array_split(std_policy_data, len(std_policy_data) // window_size):
-    stds.append(np.mean(window))
-means = np.array(means)
-stds = np.array(stds)
-print(f"Standard deviation policy: {np.mean(stds)}")
-
-plt.plot(x, means, label="LLM policy", color="g", linewidth=3)
-plt.fill_between(x, means - stds, means + stds, alpha=0.1, color="g", linewidth=4)
+print(f"Increase reward shaping: {means_list[0] / means_list[3]}")
+print(f"Increase policy: {means_list[1] / means_list[3]}")
+print(f"Increase both: {means_list[2] / means_list[3]}")
 
 plt.ylim(0, 1)
-plt.title("Average reward per episode on DoorKey environment")
+plt.title(f"Average reward per episode\n on {args.environment} environment")
 plt.xlabel("Episodes")
 plt.ylabel("Reward")
 plt.legend()
