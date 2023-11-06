@@ -25,15 +25,20 @@ class llama2_base:
         rl_temp=0,
         cache_file=None,
         sim_cache_file=None,
+        generator=None,
+        allow_farming=False,
     ):
-        self.generator = Llama.build(
-            ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
-            tokenizer_path=os.path.join(
-                base_path, "../llama-2-7b-chat/tokenizer.model"
-            ),
-            max_seq_len=2048,
-            max_batch_size=6,
-        )
+        if generator:
+            self.generator = generator
+        else:
+            self.generator = Llama.build(
+                ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
+                tokenizer_path=os.path.join(
+                    base_path, "../llama-2-7b-chat/tokenizer.model"
+                ),
+                max_seq_len=2048,
+                max_batch_size=6,
+            )
 
         # self.generator = None
 
@@ -47,6 +52,7 @@ class llama2_base:
         self.rl_temp = rl_temp
         self.suggestions = None
         self.goal = goal
+        self.allow_farming = allow_farming
 
         self.cache_file = cache_file
         self.cache_misses = 0
@@ -188,12 +194,16 @@ class llama2_base:
         else:
             # print("Cache miss")
             self.cache_misses += 1
-            result = self.generator.chat_completion(
-                [self.dialog],  # type: ignore
-                max_gen_len=100,
-                temperature=self.temperature,
-                top_p=self.top_p,
-            )
+            try:
+                result = self.generator.chat_completion(
+                    [self.dialog],  # type: ignore
+                    max_gen_len=100,
+                    temperature=self.temperature,
+                    top_p=self.top_p,
+                )
+            except AttributeError:
+                print("im smoking doobies")
+                result = [{"generation": {"content": "i smoking that zaza"}}]
 
             answer = result[0]["generation"]["content"]
 
@@ -232,8 +242,8 @@ class llama2_base:
         # print(f"{caption=}")
         # print(f"{self.suggestions=}")
 
-        # if not caption or caption in self.caption_set:
-        #     return 0.0
+        if caption in self.caption_set and self.allow_farming == False:
+            return 0.0
 
         self.caption_set.add(caption)
 
@@ -349,6 +359,8 @@ class llama2_reward_shaper(llama2_base):
         rl_temp=0,
         cache_file="cache_reward.json",
         sim_cache_file="sim_cache_reward.json",
+        generator=None,
+        allow_farming=False,
     ):
         super().__init__(
             goal,
@@ -359,6 +371,8 @@ class llama2_reward_shaper(llama2_base):
             rl_temp,
             cache_file,
             sim_cache_file,
+            generator,
+            allow_farming,
         )
 
 
@@ -373,6 +387,8 @@ class llama2_policy(llama2_base):
         rl_temp=0,
         cache_file="cache_policy.json",
         sim_cache_file="sim_cache_policy.json",
+        generator=None,
+        allow_farming=False,
     ):
         super().__init__(
             goal,
@@ -383,6 +399,8 @@ class llama2_policy(llama2_base):
             rl_temp,
             cache_file,
             sim_cache_file,
+            generator,
+            True, # always allow farming
         )
 
         self.dialog = [

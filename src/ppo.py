@@ -18,7 +18,7 @@ base_path = os.path.dirname(__file__)
 
 class PPO:
     def __init__(
-        self, param_file, result_file=None, reward=None, policy=None, consigliere=None
+        self, param_file, result_file=None, reward=None, policy=None, generator=None, allow_farming=False
     ):
         self.args = read_params(param_file)
 
@@ -35,7 +35,7 @@ class PPO:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.device = torch.device("cpu")
-        self.agent = Agent(self.env, self.llama_policy, consigliere=consigliere).to(
+        self.agent = Agent(self.env, self.llama_policy, generator=generator).to(
             self.device
         )
         self.optimizer = optim.Adam(
@@ -48,6 +48,8 @@ class PPO:
                 self.env.reset()[0]["mission"],
                 similarity_modifier=0.005,
                 cos_sim_threshold=0.84,
+                generator=generator,
+                allow_farming=allow_farming,
             )
             if self.llama_reward
             else None
@@ -291,13 +293,30 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--reward", type=bool, help="Use LLM reward shaping", default=None)
     parser.add_argument("-p", "--policy", type=bool, help="Use LLM policy", default=None)
+    parser.add_argument("-a", "--allow_farming", action="store_true")
+    parser.add_argument("-d", "--doobie", action="store_true")
+
     args = parser.parse_args()
     print(args)
+
+    if args.doobie:
+        generator = 1
+    else:
+        generator = Llama.build(
+            ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
+            tokenizer_path=os.path.join(
+                base_path, "../llama-2-7b-chat/tokenizer.model"
+            ),
+            max_seq_len=2048,
+            max_batch_size=6,
+        )
 
     ppo = PPO(
         "hyperparams.json",
         result_file=args.result_file,
         reward=args.reward,
         policy=args.policy,
+        generator=generator,
+        allow_farming=args.allow_farming,
     )
     ppo.train()

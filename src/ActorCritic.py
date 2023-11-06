@@ -49,7 +49,7 @@ class Agent(nn.Module):
         the agent is in.
     """
 
-    def __init__(self, env, llama=False, consigliere=None):
+    def __init__(self, env, llama=False, generator=None):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
             init_weightsNbias(nn.Linear(147 * 11, 64, dtype=torch.float64)),
@@ -70,10 +70,7 @@ class Agent(nn.Module):
         )
 
         goal = env.reset()[0]["mission"]
-        if not consigliere:
-            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=5) if llama else None
-        else:
-            self.consigliere = consigliere
+        self.consigliere = llama2_policy(goal, cos_sim_threshold=0.84, similarity_modifier=0.1, generator=generator) if llama else None
 
 
     def get_value(self, observation):
@@ -124,7 +121,7 @@ class Agent(nn.Module):
                 if torch.norm(advisor_values) == 0:
                     action = probs.sample()
                 else:
-                    max_rollout = 1000
+                    max_rollout = 700
                     if rollout:
                         anneal = ((max_rollout - rollout) / max_rollout) ** 2
                         if rollout > max_rollout:

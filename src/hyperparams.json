@@ -8,8 +8,8 @@
     "entropy_coef":0.0,
     "lr":3.0e-4,
     "epochs":10,
-    "llama_reward":false,
+    "llama_reward":true,
     "llama_policy":true,
     "env_name":"MiniGrid-DoorKey-8x8-v0",
-    "results_file": "data/unlockpickup5"
+    "results_file": "data/doorkey_both1"
 }
