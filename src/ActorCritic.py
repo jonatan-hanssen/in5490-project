@@ -71,7 +71,7 @@ class Agent(nn.Module):
 
         goal = env.reset()[0]["mission"]
         if not consigliere:
-            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=1) if llama else None
+            self.consigliere = llama2_policy(goal, cos_sim_threshold=0.7, similarity_modifier=5) if llama else None
         else:
             self.consigliere = consigliere
 
@@ -124,7 +124,7 @@ class Agent(nn.Module):
                 if torch.norm(advisor_values) == 0:
                     action = probs.sample()
                 else:
-                    max_rollout = 600
+                    max_rollout = 1000
                     if rollout:
                         anneal = ((max_rollout - rollout) / max_rollout) ** 2
                         if rollout > max_rollout:

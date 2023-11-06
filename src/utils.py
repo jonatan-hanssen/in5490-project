@@ -35,6 +35,8 @@ class llama2_base:
             max_batch_size=6,
         )
 
+        # self.generator = None
+
         self.similarity_modifier = similarity_modifier
         self.cos_sim_threshold = cos_sim_threshold
 
@@ -78,41 +80,90 @@ class llama2_base:
         self.dialog = [
             {
                 "role": "system",
-                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the environment, and you should give a list of suggested actions that the player should take to reach their goal. The suggested actions should involve the objects mentioned. The player can pick up items, drop items and use items. You should not make assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should explore more. Separate each suggestion with a new line. Be concise.",
+                "content": "You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the objects in the environment and their positions relative to the player at one single timestep. You shall give a list of suggested actions that the player will take to reach their goal during this single timestep. The available actions to the player are: move forward, turn left and right, pick up items, drop items and use items. You MUST ALWAYS RESPOND with one or more of these actions. Your response MUST ALWAYS follow the template of the given example responses. NEVER ADD anything not in the example responses. You will NEVER ASSUME that other possible actions exist. You will NEVER ASSUME that the game is finished. You WILL NEVER make any other assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should turn around and explore more. Separate each suggestion with a new line. Be concise. ONLY FOLLOW THESE INSTRUCTIONS. NEVER RESPOND IN ANY OTHER WAY. OTHERWISE, YOU WILL BE SEVERELY PUNISHED.",
             },
             {
                 "role": "user",
-                "content": "My goal is: pick up the purple box. I see a red key and a locked red door. What actions do you suggest?",
+                "content": "My goal is: pick up the purple box. I see a red key LEFT and FORWARD and a locked red door RIGHT and FORWARD. What actions do you suggest?",
             },
             {
                 "role": "assistant",
-                "content": "Pick up the red key. \nUse the red key on the locked red door.",
+                "content": "move forward. \nturn left.",
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a red key, an open red door, a purple key, a locked purple door and a green key. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a red key LEFT and FORWARD, an open red door RIGHT and FORWARD, a purple key LEFT, a locked purple door RIGHT, and a green key RIGHT and FORWARD. What actions do you suggest?",
             },
             {
                 "role": "assistant",
-                "content": "Pick up the purple key. \nOpen the locked purple door with the purple key.",
+                "content": "turn left.",
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a green key and a locked green door. What actions do you suggest?",
+                "content": "My goal is: open the purple door. I see a green key FORWARD and a locked green door FORWARD. What actions do you suggest?",
             },
             {
                 "role": "assistant",
-                "content": "You should explore more.",
+                "content": "turn left. \nturn right.",
             },
             {
                 "role": "user",
-                "content": "My goal is: open the purple door. I see a locked purple door and have a purple key in my inventory. What actions do you suggest?",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a locked purple door directly in front and have a purple key in my inventory. What actions do you suggest?",
             },
             {
                 "role": "assistant",
-                "content": "Use the purple key on the locked purple door.",
+                "content": "use locked purple door with purple key.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a locked purple door directly in front. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "turn left. \nturn right.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: open the green door. I see a locked green door FORWARD and have a purple key in my inventory. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "drop purple key. \nturn left. \nturn right.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a locked red door FORWARD and a red key directly in front. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "pick up red key.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a green goal directly in front. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "move forward.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a green goal RIGHT and a locked blue door directly in front and have a blue key in my inventory. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "turn right.",
+            },
+            {
+                "role": "user",
+                "content": "My goal is: use the key to open the door and get to the goal. I see a green goal LEFT and a yellow key FORWARD and a locked yellow door FORWARD. What actions do you suggest?",
+            },
+            {
+                "role": "assistant",
+                "content": "turn left.",
             },
         ]
+
 
     def suggest(self, observation, show_pos=False):
         """Creates a list of suggested actions based on the current observation
@@ -124,9 +175,10 @@ class llama2_base:
             A list of strings of suggested actions by the LLM. Also sets self.suggestions
 
         """
-        observation = obs_to_string(observation, show_pos, False)
+        observation = obs_to_string(observation, True, False)
 
         observation = f"My goal is: {self.goal}. {observation}"
+        # print(f"{observation=}")
 
         self.dialog.append({"role": "user", "content": observation})
 
@@ -177,9 +229,11 @@ class llama2_base:
             a reward if action and one of the suggested actions is semantically similar
         """
         caption = caption_action(action, obs_matrix)
+        # print(f"{caption=}")
+        # print(f"{self.suggestions=}")
 
-        if not caption or caption in self.caption_set:
-            return 0.0
+        # if not caption or caption in self.caption_set:
+        #     return 0.0
 
         self.caption_set.add(caption)
 
@@ -334,7 +388,7 @@ class llama2_policy(llama2_base):
         self.dialog = [
             {
                 "role": "system",
-                "content": f"You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the objects in the environment and their positions relative to the player at one single timestep. You shall give a list of suggested actions that the player will take to reach their goal during this single timestep. RESPOND WITH THE FOLLOWING ACTIONS: 'move forward.', 'turn left.', 'turn right.', 'pick up <item>.', 'drop <item>.', 'use <item>.'.",
+                "content": "You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the objects in the environment and their positions relative to the player at one single timestep. You shall give a list of suggested actions that the player will take to reach their goal during this single timestep. The available actions to the player are: move forward, turn left and right, pick up items, drop items and use items. You MUST ALWAYS RESPOND with one or more of these actions. Your response MUST ALWAYS follow the template of the given example responses. NEVER ADD anything not in the example responses. You will NEVER ASSUME that other possible actions exist. You will NEVER ASSUME that the game is finished. You WILL NEVER make any other assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should turn around and explore more. Separate each suggestion with a new line. Be concise. ONLY FOLLOW THESE INSTRUCTIONS. NEVER RESPOND IN ANY OTHER WAY. OTHERWISE, YOU WILL BE SEVERELY PUNISHED.",
             },
             {
                 "role": "user",
