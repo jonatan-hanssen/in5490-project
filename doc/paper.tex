@@ -96,7 +96,7 @@ For the implementation details of our PPO and the hyperparameters used, see the 
 
 \subsubsection{PPO with LLM Integrated in the Policy Function}
 
-In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the logits of the actions, thus influencing the probability weights of each action being taken so that semantically similar actions are weighted higher than others. This is a very direct approach to influencing the agent; if an action is favoured by the LLM in a timestep, this will affect the actions immediately by increasing the chance that this action is sampled. Thus, this method functions as a sort of coach, giving immediate and direct suggestions throughout the episodes. Throughout the paper, we will refer to this as LLM policy influencing.
+In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the logits of the actions, thus influencing the probability weights of each action being taken so that semantically similar actions are weighted higher than others. This is a very direct approach to influencing the agent; if an action is favoured by the LLM in a timestep, this will affect the actions immediately by increasing the chance that this action is sampled. Thus, this method functions analogously to how a coach instructs a player, giving direct suggestions to the agent immediately as the agent is about to perform actions at all timesteps of each episode. Throughout the paper, we will refer to this as LLM policy influencing.
 
 \subsubsection{PPO with LLM Integrated in the Reward Function}
 
@@ -111,7 +111,7 @@ Finally, we combine the two LLM integrations, hoping to combine the direct influ
 
 In both these cases, we need two language models; one to generate the suggestions and one to generate semantic similarity values.
 
-For text generation, we have decided utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we chose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
+For text generation, we have decided utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we chose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama 2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
 
 Some research papers propose fine-tuning of LLMs as means of leveraging the capabilites of the language models for decision-making purposes even further \cite{grounding}. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, this is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
 
@@ -168,7 +168,12 @@ This environment is quite similar to the DoorKey environment. Fig \ref{unlockpic
 
 \section{Results}
 
-\subsection{Empty Environment}
+This section outlines the results of our experiments in each of our selected environments. We also show example outputs from the LLM and examine how these may influence our results.
+
+\subsection{Results per environment}
+
+\subsubsection{Empty environment}
+\label{emptyresultstext}
 
 In this simple environment, we see that both LLM reward shaping, LLM policy influencing and A2C2 outperform the baseline model. Averaging over all episodes for all eight runs, we find that reward shaping increases the mean reward received by $10\%$ over the baseline, with a lower standard deviation in rewards received per run of $0.12$. Policy influencing scores even higher at $32\%$ over the baseline, with an even lower standard deviation of $0.09$. Finally, A2C2 performs the best of the four with a $37\%$ increase in average reward over the baseline model, and the lowest standard deviation of $0.04$
 
@@ -196,7 +201,7 @@ Baseline & 0.69 & 0.28 & 0\% \\
 \end{table}
 
 
-\subsection{DoorKey environment}
+\subsubsection{DoorKey environment}
 
 As we can see from Figure \ref{doorkeyresults}, we see impressive results from our LLM integration in this environment as well, especially from reward shaping and A2C2. For the mean and standard deviation of all methods, see table \ref{doorkeytable}.
 
@@ -227,7 +232,7 @@ However, the results from both of these methods are eclipsed by the results from
 \label{doorkeyresults}
 \end{figure}
 
-\subsection{Unlock Pickup environment}
+\subsubsection{Unlock Pickup environment}
 
 The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity makes the average reward much lower, and we see that all methods struggle (figure \ref{unlockpickupresults}).
 
@@ -254,11 +259,12 @@ Both & 0.99 & 1 & 36\% \\
 \end{center}
 \end{table}
 
-As we can see, policy influencing struggles in this environment as well, performing even worse than the baseline. Policy influencing received a mean average score of NUMBER, which is PERCENT lower than the baseline. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game.
+As is clear from the graph, policy influencing struggles in this environment as well, performing even worse than the baseline. Policy influencing received a mean average score of NUMBER, which is PERCENT lower than the baseline. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game.
 
-Our A2C2 performs much better than just policy influencing, but we are not here able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of NUMBER, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
+Our A2C2 performs much better than only policy influencing, but in this case we are not able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of NUMBER, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
 
 \subsection{Inspecting the LLM responses}
+\label{llmresponse}
 
 Having looked at the performance of our different models, we can see that the suggestions from the LLM have positive effects in many cases, while also sometimes being detrimental. We now inspect some sample responses from the LLM, to gain deeper understanding of how the LLM is effecting the agent.
 
@@ -281,15 +287,19 @@ My goal is: get to the green goal square. I see a green goal LEFT and FORWARD." 
 
 \section{Discussion, Future Work and Conclusion}
 
-As shown in the previously referenced work (\ref{background}), the integration of a Large Language Model into the Reinforcement Learning framework can improve network performance. There are various ways to do this, and our work attempts to compare two main methodologies of integrating the LLM, namely through reward shaping and policy influencing. We have implemented algorithms to perform this on top of a PPO baseline, as well as a combination of the two, and have measured varying results across environments of different complexities.
+As shown in the previously referenced work (\ref{background}), the integration of a Large Language Model into the Reinforcement Learning framework can improve network performance. There are various ways to do this, and our work attempts to compare two main methodologies of integrating the LLM as well as the combination of the two, namely through reward shaping and policy influencing. We have implemented algorithms to perform this on top of a PPO baseline, and have measured several interesting results across environments of varying complexities.
 
-Our reward shaping algorithm did best in the more complex environments (DoorKey and Unlock Pickup), while policy influencing performed better in the simpler Empty environment. A possible explanation for this could lie in the details of how the algorithms impact choice of action. LLM reward shaping does not directly impact decision making at all; it only impacts the reward function, meaning the mechanism that dictates which action is taken is still solely the actor network present in PPO. This means that reward shaping does not introduce any risk of the agent choosing a suboptimal action directly due to being told to do so by the LLM. Learning which action to take is still done through the same process of trial and error as in classical RL.
+Amongst the two main methodologies, our reward shaping algorithm did best in the more complex environments (DoorKey and Unlock Pickup), while policy influencing performed better in the simpler Empty environment. A possible explanation for this could lie in the details of how the algorithms impact choice of action. LLM reward shaping does not directly impact decision making at all; it only impacts the reward function, meaning the mechanism that dictates which action is taken is still solely the actor network present in PPO. This means that reward shaping does not introduce any risk of the agent choosing a suboptimal action directly due to being told to do so by the LLM. Learning which action to take is still done through the same process of trial and error as in classical RL.
 
 However, the causality behind which action is taken is different in LLM policy influencing; the LLM suggestions are added directly to the logits used to calculate probabilities of each action, meaning that the LLM directly influences the decision making process. Every time the LLM suggests performing a suboptimal action, this impacts the sampled action, regardless whether the PPO baseline has learned that another action is better or not. Over time, this may lead to the PPO not being able to explore other actions than the ones proposed by the LLM, thus making the PPO learn slower than if it was allowed to choose actions on its own. In other words, the LLM may have too much impact in the decision making when performing policy influencing, making the algorithm prone to errors from the LLM.
 
-A natural suggestion for how to improve the performance of LLM policy influencing in the future thus becomes to decrease the influence from the LLM over time, letting the PPO choose on its own as learning progresses. One way of doing this is through annealing of the LLM values added to the logits. This can be combined with experimenting with a hyperparameter determining how the LLM values should be weighted at the beginning of training. We have attempted to do this, but have encountered programmatic issues regarding scaling; the logits change in magnitude over time, and a fitting way of dynamically changing the LLM contributions to the logits has to be found.We believe this is what causes the noticable dip in performance that happens after some initial rollouts in the policy influencing results.
+Regardless of these shortcomings in the performance of policy influencing, it seems to have contributed positively when combining the two methods in A2C2, which outperformed each of the methods in both the Empty and DoorKey environments. As mentioned in \ref{emptyresultstext}, it seems that because the reward shaping makes the PPO learn the environment faster, it lessens the conflict between the influences of the LLM and the PPO itself on the logits. This allows the PPO to exert the most influence on the logits earlier on. However, this conflict is not entirely negated, as witnessed in the UnlockPickup environment where reward shaping still vastly outperforms both policy influencing and A2C2.
 
-Overall, we found that the LLM can be a valuable asset in the RL framework, but that a balance must be struck regarding how significantly it should influence the learning process.
+A natural suggestion for how to improve the performance of both LLM policy influencing and A2C2 thus becomes to find a way to appropriately decrease the influence from the LLM over time, letting the PPO choose on its own as learning progresses. One way of doing this is through annealing of the LLM values added to the logits. This can be combined with experimenting with a hyperparameter determining how the LLM values should be weighted at the beginning of training. We have attempted to do this, but have encountered programmatic issues regarding scaling; the logits change in magnitude over time, making it harder to adjust the rate change in LLM influence at a desired pace. Therefore, a fitting way of dynamically changing the LLM contributions to the logits at some specified rate has to be found.
+
+Another potential improvement, perhaps the most obvious one, is to utilize a better LLM for generating responses, both for reward shaping and policy influencing. The one we used, the 7B model of Llama 2, varies greatly in the quality of responses it produces, as demonstrated in \ref{llmresponse}. While is cost-effective both financially and in terms of computational resources, we expect that better results can be achieved with higher-performance models. This is especially true for policy influencing, where performance depends heavily on the LLM understanding the environment in detail.
+
+Overall, we found that the LLM can be a valuable asset in the RL framework, but that a balance must be struck regarding how significantly it should influence the learning process. Our results suggest that both policy influencing and reward shaping can be beneficial in environments of varying complexity, but the two, or their combination, can contribute differently depending on the environment. In simpler environments like Empty, where the LLM shows good understanding of the environment and can make detailed suggestions, policy influencing is capable of contributing the most. However, as environment complexity increases and the LLM may not be as precise in policy influencing, it seems to pay off prioritizing reward shaping and having policy influencing contribute less.
 
 \section*{Ethics Statement}
 
