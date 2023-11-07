@@ -18,7 +18,13 @@ base_path = os.path.dirname(__file__)
 
 class PPO:
     def __init__(
-        self, param_file, result_file=None, reward=None, policy=None, generator=None, allow_farming=False
+        self,
+        param_file,
+        result_file=None,
+        reward=None,
+        policy=None,
+        generator=None,
+        allow_farming=False,
     ):
         self.args = read_params(param_file)
 
@@ -81,7 +87,9 @@ class PPO:
             (
                 env_reward,
                 advisor_reward_cum,
-            ) = self.next_episode(rollout)  # Perform steps and store relevant values
+            ) = self.next_episode(
+                rollout
+            )  # Perform steps and store relevant values
             rewards.append(env_reward)
             # if not env_reward:
             #     print("No reward received, skipping update of networks")
@@ -121,12 +129,19 @@ class PPO:
         observation = torch.Tensor(observation_dict["image"].flatten()).to(self.device)
         env_reward = 0
         advisor_reward_cum = 0
+        if self.reward_shaper:
+            self.reward_shaper.goal = observation_dict["mission"]
+
+        if self.agent.consigliere:
+            self.agent.consigliere.goal = observation_dict["mission"]
 
         for step in range(self.args["steps"]):
             self.observations[step] = observation
 
             with torch.no_grad():
-                action, logprob, _, value = self.agent.get_action_and_value(observation, rollout=rollout)
+                action, logprob, _, value = self.agent.get_action_and_value(
+                    observation, rollout=rollout
+                )
 
             self.values[step] = value.flatten()
             self.actions[step] = action
@@ -289,10 +304,18 @@ class PPO:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-f", "--result_file", type=str, help="Output file for env rewards", default=None
+        "-f",
+        "--result_file",
+        type=str,
+        help="Output file for env rewards",
+        default=None,
     )
-    parser.add_argument("-r", "--reward", type=bool, help="Use LLM reward shaping", default=None)
-    parser.add_argument("-p", "--policy", type=bool, help="Use LLM policy", default=None)
+    parser.add_argument(
+        "-r", "--reward", type=bool, help="Use LLM reward shaping", default=None
+    )
+    parser.add_argument(
+        "-p", "--policy", type=bool, help="Use LLM policy", default=None
+    )
     parser.add_argument("-a", "--allow_farming", action="store_true")
     parser.add_argument("-d", "--doobie", action="store_true")
 
