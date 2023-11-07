@@ -25,8 +25,6 @@ for file in os.listdir(data_path):
         continue
 
     data = np.load(os.path.join(data_path, file))
-    print(f"{file=}")
-    print(f"{len(data)=}")
 
     if "llm" in file or "reward" in file:
         reward_data.append(data)
@@ -39,14 +37,12 @@ for file in os.listdir(data_path):
 
     elif len(file) < len(args.environment) + 6:
         non_llm_data.append(data)
-    print(f"{len(file)=}")
-    print(f"{len(args.environment)=}")
 
 DATA_SIZE = 191 if args.environment.lower() == "empty" else 1991
 
 data_list = [reward_data, policy_data, both_data, non_llm_data]
 color_list = ["r", "g", "k", "b"]
-title_list = ["LLM reward shaping", "LLM policy influencing", "Both", "Baseline"]
+title_list = ["LLM reward shaping", "LLM policy influencing", "A2C2", "Baseline"]
 
 means_list = list()
 
@@ -83,9 +79,13 @@ for i in range(4):
     #     x, means - stds, means + stds, alpha=0.1, color=color_list[i], linewidth=4
     # )
 
-print(f"Increase reward shaping: {means_list[0] / means_list[3]}")
-print(f"Increase policy: {means_list[1] / means_list[3]}")
-print(f"Increase both: {means_list[2] / means_list[3]}")
+print(f"Increase reward shaping: {means_list[0] / means_list[-1]}")
+print(f"Increase policy: {means_list[1] / means_list[-1]}")
+print(f"Increase both: {means_list[2] / means_list[-1]}")
+
+print(f"Increase both over reward: {means_list[2] / means_list[0]}")
+print(f"Increase both over policy: {means_list[2] / means_list[1]}")
+
 
 plt.ylim(0, 1)
 plt.title(f"Average reward per episode\n on {args.environment} environment")
