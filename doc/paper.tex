@@ -170,7 +170,9 @@ This environment is quite similar to the DoorKey environment. Fig \ref{unlockpic
 
 \subsection{Empty Environment}
 
-In this simple environment, we see that both LLM reward shaping and LLM policy influencing outperform the baseline model. Averaging over all episodes for all eight runs per model, we find LLM policy influencing to perform best, receiving $30\%$ more reward than the baseline. LLM reward shaping similarly outperforms the baseline, receiving $10\%$ more reward. Given that policy influencing is a more direct approach, it makes sense that this method performs best, as the simple environment makes it likely that the LLM will suggest the best action the majority of the time.
+In this simple environment, we see that both LLM reward shaping, LLM policy influencing and A2C2 outperform the baseline model. Averaging over all episodes for all eight runs, we find that reward shaping increases the mean reward received by $10\%$ over the baseline, with a lower standard deviation in rewards received per run of $0.12$. Policy influencing scores even higher at $32\%$ over the baseline, with an even lower standard deviation of $0.09$. Finally, A2C2 performs the best of the four with a $37\%$ increase in average reward over the baseline model, and the lowest standard deviation of $0.04$
+
+Notably, both policy influencing and A2C2 receive much higher rewards than reward shaping and the baseline right from the first episode. This makes sense as the environment is so simple that the LLM seems not to have any problem giving sensible instructions to directly influence the policy most of the time. However, we notice from the graph that policy influencing alone consistently gives a significant dip in received reward after the first few episodes, which it later compensates for, following a similar trajectory to that of reward shaping after about 50 episodes. We believe this could be a sign of the policy influencing being somewhat overly influential in changing the logits early on, because the logits initially have low values. As the PPO learns the environment, the magnitude of the logits increases, which at some point leads to conflicting contributions to the logits from the LLM and from the PPO. As the dip stops and performance increases again, this is likely due to the PPO becoming more influencing than the LLM after having started to learn the environment properly. We also notice that this dip is completely removed with A2C2, which could signify that the added reward shaping helps the PPO learn faster, enabling it to increase the influence from PPO on the logits faster.
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/emptyresults.png}}
@@ -185,10 +187,10 @@ In this simple environment, we see that both LLM reward shaping and LLM policy i
 \begin{tabular}{c | c c c}
 Method & Mean reward & Std reward & Increase over baseline \\
 \hline
-Baseline & 0.99 & 1 & 0\% \\
-Reward shaping & 0.99 & 1 & 30\% \\
-Policy influencing & 0.99 & 1 & -7\% \\
-Both & 0.99 & 1 & 36\% \\
+Reward shaping & 0.76 & 0.12 & 10\% \\
+Policy influencing & 0.91 & 0.09 & 32\% \\
+Both & 0.95 & 0.04 & 37\% \\
+Baseline & 0.69 & 0.28 & 0\% \\
 \end{tabular}
 \end{center}
 \end{table}
