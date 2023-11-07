@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{tabularx}
 \usepackage{float}
 \usepackage{hyperref}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
@@ -95,15 +96,15 @@ For the implementation details of our PPO and the hyperparameters used, see the 
 
 \subsubsection{PPO with LLM Integrated in the Policy Function}
 
-In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the logits of the actions, thus influencing the probability weights of each action being taken so that semantically similar actions are weighted higher than others. We call this the Actor-Advisor-Critic model.
+In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the logits of the actions, thus influencing the probability weights of each action being taken so that semantically similar actions are weighted higher than others. This is a very direct approach to influencing the agent; if an action is favoured by the LLM in a timestep, this will affect the actions immediately by increasing the chance that this action is sampled. Thus, this method functions as a sort of coach, giving immediate and direct suggestions throughout the episodes. Throughout the paper, we will refer to this as LLM policy influencing.
 
 \subsubsection{PPO with LLM Integrated in the Reward Function}
 
-The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM at every timestep. In addition to the state observation, the LLM is also asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, the LLM is used as a tool for semantic similarity comparison, comparing its own formerly proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards.
+The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM at every timestep. In addition to the state observation, the LLM is also asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, the LLM is used as a tool for semantic similarity comparison, comparing its own formerly proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional pseudo-reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards, which only take effect when the policy is updated through backpropogation after an entire episode is completed. Thus, this method functions more as an advisor, influencing the policy in a more long term capacity than the coaching of the policy influencer. Throughout the paper, we will refer to this as LLM reward shaping.
 
 \subsubsection{PPO with both LLM reward shaping and LLM policy influencing}
 
-Finally, we combine the two LLM integrations, hoping to combine the direct influence of our policy integration with the more indirect reward shaping. Thus, we are affecting the policy in two ways: Through reward shaping, we are causing the policy to update to better attain these pseudorewards, which will encourage completing of subgoals which are necessary to complete the actual goal of the environment, but which do not give out intermediate rewards. Through policy influencing, we are nudging the agent to take favorable actions by directly altering the action probabilities, which will make it more likely that the agent completes the given task and receives an actual reward from the environment. Thus, the agent will more quickly discover the correct policy.
+Finally, we combine the two LLM integrations, hoping to combine the direct influence of our policy integration with the more indirect reward shaping. Thus, we are affecting the policy in two ways: Through reward shaping, we are causing the policy to update to better attain the aforementioned pseudo-rewards, which will encourage completing of subgoals which are necessary to complete the actual goal of the environment, but which do not give out intermediate rewards. Through policy influencing, we are nudging the agent to take favorable actions by directly altering the action probabilities, which will make it more likely that the agent completes the given task and receives an actual reward from the environment. Thus, the agent will more quickly discover the correct policy. We call this the \textbf{Actor-Advisor-Critic-Coach} method, or \textbf{A2C2} for short.
 
 
 \subsection{Language Models}
@@ -195,11 +196,7 @@ Both & 0.99 & 1 & 36\% \\
 
 \subsection{DoorKey environment}
 
-As we can see from Figure \ref{doorkeyresults}, LLM reward shaping gives a noticable improvement to the performance of the model, not just in the early stages of training, but throughout the entire training process. Averaging over all episodes of all eight runs per model, we find that LLM reward shaping receives $24\%$ more reward per episode than PPO trained without LLM rewards. Furthermore, this is an improvement that comes at very little computational cost, because LLM responses can be cached between runs. Of the eight runs on this environment using LLM reward shaping, the last three runs never queried the LLM at all, only relying on the cache of previous answers. In all methods, we see that the standard deviation is very large ($0.28$ and $0.31$ for LLM reward shaping and baseline, respectively). Given that there is no reward given for a partially completed task, this is not unexpected.
-
-% We also notice a significant performance increase when using LLM policy influencing, even somewhat more than from reward shaping. Averaging over all episodes of all runs, we observe a NUMBER\% increase in reward per episode compared to the PPO baseline, and a NUMBER\% increase when compared to LLM reward shaping. The standard deviation when using LLM policy influencing is also similarly large to PPO and reward shaping (NUMBER). By caching LLM responses similarly to when performing reward shaping, this method too adds very little computational cost to the training in total.
-
-Using LLM policy influencing in the DoorKey environment has resulted in somewhat worse results than using the PPO baseline. Averaging per episode over all eight runs shows that LLM policy influencing only achieves $89\%$ of the reward amount per episode that the baseline achieves. Judging from the graph, it may seem that policy influencing may have given some initial learning advantage, but ultimately slows learning for the agent further on. The method also gives the highest standard deviation of reward given per episode of the three compared so far, at $0.25$. As with reward shaping, we have also used caching of LLM responses to significantly decrease the computational overhead cost to a minimum. 
+As we can see from Figure \ref{doorkeyresults}, we see impressive results from our LLM integration in this environment as well, especially from reward shaping and A2C2. For the mean and standard deviation of all methods, see table \ref{doorkeytable}.
 
 \begin{table}[h]
 \caption{All results on DoorKey environment}
@@ -216,8 +213,11 @@ Both & 0.99 & 1 & 36\% \\
 \end{center}
 \end{table}
 
-% ***TODO: add paragraph about using both together*** 
-% However, the results from both of these methods are eclipsed by the results from combining LLM reward shaping and policy influencing together. Averaging over 8 runs, we observe a NUMBER\% increase in reward from the environment compared to PPO alone, NUMBER\% higher than reward shaping and NUMBER\%higher than policy influencing, with a similar standard deviation of NUMBER. 
+LLM reward shaping gives a noticable improvement to the performance of the model, not just in the early stages of training, but throughout the entire training process. Averaging over all episodes of all eight runs per model, we find that LLM reward shaping receives $24\%$ more reward per episode than PPO trained without LLM rewards. Furthermore, this is an improvement that comes at very little computational cost, because LLM responses can be cached between runs. Of the eight runs on this environment using LLM reward shaping, the last three runs never queried the LLM at all, only relying on the cache of previous answers.
+
+Looking at LLM policy influencing, we see that it has resulted in somewhat worse results than using the PPO baseline. Averaging per episode over all eight runs shows that LLM policy influencing only achieves $89\%$ of the reward amount per episode that the baseline achieves. Judging from the graph, it may seem that policy influencing may have given some initial learning advantage, but ultimately slows learning for the agent further on. The method also gives the highest standard deviation of reward given per episode of the three compared so far, at $0.25$. As with reward shaping, we have also used caching of LLM responses to significantly decrease the computational overhead cost to a minimum. 
+
+However, the results from both of these methods are eclipsed by the results from combining LLM reward shaping and policy influencing together in our A2C2 model. Averaging over 8 runs, we observe a $34\%$ increase in reward from the environment compared to PPO alone, $8\%$ higher than reward shaping and $43\%$ higher than policy influencing, with the lowest standard deviation of all methods, at $0.22$. Clearly, the combination of immediate direct suggestions from the policy influencer and long term indirect suggestions from the reward shaper is a favourable way of integrating the LLM with PPO, which gives results which are better than the sum of its parts, not only in the simple Empty environment, but also in more complicated environments like DoorKey.
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/doorkeyresults.png}}
@@ -227,7 +227,7 @@ Both & 0.99 & 1 & 36\% \\
 
 \subsection{Unlock Pickup environment}
 
-The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity to the state space makes the LLM contribution even more significant to the RL performance.
+The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity makes the average reward much lower, and we see that all methods struggle (figure \ref{unlockpickupresults}).
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/unlockpickupresults.png}}
@@ -235,7 +235,7 @@ The Unlock Pickup environment is an even more complex environment than DoorKey, 
 \label{unlockpickupresults}
 \end{figure}
 
-Looking at figure \ref{unlockpickupresults}, we can see that all methods struggle. However, we see that the LLM reward shaping performs much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given that terrible performance of the baseline, LLM reward shaping achieved a percentage increase of over $700\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0089$ (with a standard deviation of $0.015$), while LLM reward shaping achieved an average reward of $0.062$ (with a standard deviation of $0.081$).
+As we can see, LLM performs the best overall, and performs much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given the terrible performance of the baseline, LLM reward shaping achieved a percentage increase of over $700\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0089$ (with a standard deviation of $0.015$), while LLM reward shaping achieved an average reward of $0.062$ (with a standard deviation of $0.081$). See table \ref{unlockpickuptable}.
 
 \begin{table}[h]
 \caption{All results on UnlockPickup environment}
@@ -252,16 +252,38 @@ Both & 0.99 & 1 & 36\% \\
 \end{center}
 \end{table}
 
-{\it TODO: Add results from policy influencing}
+As we can see, policy influencing struggles in this environment as well, performing even worse than the baseline. Policy influencing received a mean average score of NUMBER, which is PERCENT lower than the baseline. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game.
+
+Our A2C2 performs much better than just policy influencing, but we are not here able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of NUMBER, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
+
+\subsection{Inspecting the LLM responses}
+
+Having looked at the performance of our different models, we can see that the suggestions from the LLM have positive effects in many cases, while also sometimes being detrimental. We now inspect some sample responses from the LLM, to gain deeper understanding of how the LLM is effecting the agent.
+
+\subsubsection{Empty}
+
+From table \ref{emptyresponses} we see that the suggestions are very good, which explain the great performance all LLM integrations show.
+
+\begin{table}[h]
+\caption{All results on UnlockPickup environment}
+\begin{center}
+\label{unlockpickuptable}
+\begin{tabular}{c | c}
+Prompt & Response \\
+\hline
+My goal is: get to the green goal square. I see a green goal LEFT and FORWARD." & "move forward."
+\end{tabular}
+\end{center}
+\end{table}
 
 
 \section{Discussion, Future Work and Conclusion}
 
-As shown in the previously referenced work (\ref{background}), the integration of a Large Language Model into the Reinforcement Learning framework can improve network performance. There are various ways to do this, and our work attempts to compare two main methodologies of integrating the LLM, namely through reward shaping and policy influencing. We have implemented algorithms to perform this on top of a PPO baseline, and have measured varying results across environments of different complexities.
+As shown in the previously referenced work (\ref{background}), the integration of a Large Language Model into the Reinforcement Learning framework can improve network performance. There are various ways to do this, and our work attempts to compare two main methodologies of integrating the LLM, namely through reward shaping and policy influencing. We have implemented algorithms to perform this on top of a PPO baseline, as well as a combination of the two, and have measured varying results across environments of different complexities.
 
 Our reward shaping algorithm did best in the more complex environments (DoorKey and Unlock Pickup), while policy influencing performed better in the simpler Empty environment. A possible explanation for this could lie in the details of how the algorithms impact choice of action. LLM reward shaping does not directly impact decision making at all; it only impacts the reward function, meaning the mechanism that dictates which action is taken is still solely the actor network present in PPO. This means that reward shaping does not introduce any risk of the agent choosing a suboptimal action directly due to being told to do so by the LLM. Learning which action to take is still done through the same process of trial and error as in classical RL.
 
-However, the causality behind which action is taken is different in LLM policy influencing; the LLM suggestions are added directly to the logits used to calculate probabilities of each action, meaning that the LLM directly influences the decision making process. Every time the LLM suggests performing a suboptimal action, this impacts the action probabilities, regardless whether the PPO baseline has learned that another action is better or not. Over time, this may lead to the PPO not being able to explore other actions than the ones proposed by the LLM, thus making the PPO learn slower than if it was allowed to choose actions on its own. In other words, the LLM may have too much impact in the decision making when performing policy influencing, making the algorithm prone to errors from the LLM.
+However, the causality behind which action is taken is different in LLM policy influencing; the LLM suggestions are added directly to the logits used to calculate probabilities of each action, meaning that the LLM directly influences the decision making process. Every time the LLM suggests performing a suboptimal action, this impacts the sampled action, regardless whether the PPO baseline has learned that another action is better or not. Over time, this may lead to the PPO not being able to explore other actions than the ones proposed by the LLM, thus making the PPO learn slower than if it was allowed to choose actions on its own. In other words, the LLM may have too much impact in the decision making when performing policy influencing, making the algorithm prone to errors from the LLM.
 
 A natural suggestion for how to improve the performance of LLM policy influencing in the future thus becomes to decrease the influence from the LLM over time, letting the PPO choose on its own as learning progresses. One way of doing this is through annealing of the LLM values added to the logits. This can be combined with experimenting with a hyperparameter determining how the LLM values should be weighted at the beginning of training. We have attempted to do this, but have encountered programmatic issues regarding scaling; the logits change in magnitude over time, and a fitting way of dynamically changing the LLM contributions to the logits has to be found.We believe this is what causes the noticable dip in performance that happens after some initial rollouts in the policy influencing results.
 
