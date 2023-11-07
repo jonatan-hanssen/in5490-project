@@ -270,17 +270,59 @@ Having looked at the performance of our different models, we can see that the su
 
 \subsubsection{Empty}
 
-From table \ref{emptyresponses} we see that the suggestions are very good, which explain the great performance all LLM integrations show.
+From table \ref{emptyresponses} we see that the suggestions are very good, which explain the great performance all LLM integrations show. However, we also see that this is a very simple environment, where one would expect an LLM to be able to respond coherently.
 
 \begin{table}[h]
-\caption{All results on UnlockPickup environment}
+\caption{Sample responses from LLM in Empty environment.}
 \begin{center}
-\label{unlockpickuptable}
-\begin{tabular}{c | c}
+\label{emptyresponses}
+\begin{tabularx}{3.25in}{X | X}
 Prompt & Response \\
 \hline
-My goal is: get to the green goal square. I see a green goal LEFT and FORWARD." & "move forward."
-\end{tabular}
+My goal is: get to the green goal square. I see a green goal left and forward & move forward. \\
+My goal is: get to the green goal square. I see a green goal left. & move left. \\
+My goal is: get to the green goal square. I see a green goal directly in front. & move forward.
+\end{tabularx}
+\end{center}
+\end{table}
+
+\subsubsection{DoorKey}
+
+From table \ref{doorkeyresponses} we can see that some suggestions are good, such as suggestion to pick up a key when it is directly in front, and moving towards the goal although other observations are also present. We also see some suboptimal responses, such as suggesting to pick up a key when it is not directly in front and suggesting to pick up a key when it is already in the players inventory. These poor responses can explain why policy influencing can have a detrimental impact in this environment, as these actions will always be sampled slightly more often.
+
+\begin{table}[h]
+\caption{Sample responses from LLM in DoorKey environment. Good responses above line and suboptimal responses below. GOAL is equal to {\it use the key to open the door and then get to the goal}}
+\begin{center}
+\label{doorkeyresponses}
+\begin{tabularx}{3.25in}{X | X}
+Prompt & Response \\
+\hline
+My goal is: GOAL. I see a closed yellow door left, see a yellow key directly in front. & pick up yellow key. \\
+My goal is: GOAL. I see a green goal left and forward, see a open yellow door left, see a yellow key right and forward. & move forward. \\
+My goal is: GOAL. I see a green goal left and forward, see a open yellow door left, see a yellow key right. & move forward. \\
+\hline
+My goal is: GOAL. I see a yellow key left and forward, see a locked yellow door left and forward. & pick up yellow key. \\
+My goal is: GOAL. I see a green goal left and forward, have a yellow key in my inventory, see a closed yellow door right and forward. & pick up yellow key.
+\end{tabularx}
+\end{center}
+\end{table}
+
+\subsubsection{UnlockPickup}
+
+On our final environment, we can see from table \ref{unlockpickupresponses}, such as suggestion to pick up a key when it is directly in front, and moving towards the goal although other observations are also present. We also see some suboptimal responses, such as suggesting to pick up a key when it is not directly in front and suggesting to pick up a key when it is already in the players inventory. These poor responses can explain why policy influencing can have a detrimental impact in this environment, as these actions will always be sampled slightly more often.
+
+\begin{table}[h]
+\caption{Sample responses from LLM in UnlockPickup environment. Good responses above line and suboptimal responses below.}
+\begin{center}
+\label{unlockpickupresponses}
+\begin{tabularx}{3.25in}{X | X}
+Prompt & Response \\
+\hline
+My goal is: pick up the blue box. I see a locked red door LEFT and FORWARD, see a red key directly in front. & pick up red key.
+\hline
+My goal is: pick up the grey box. I have a grey key in my inventory. & Congratulations, you have successfully reached your goal! You find a small, mysterious box inside the grey box. It's made of a strange, otherworldly material that seems to glow with an ethereal light. As you examine it closer, you can feel a faint hum of energy emanating from it. \\
+My goal is: pick up the green box. I have a purple key in my inventory. & Great! With the purple key in your inventory, you can now unlock the green box. You approach the green box and use the purple key to unlock it. Inside, you find a shiny coin!
+\end{tabularx}
 \end{center}
 \end{table}
 
