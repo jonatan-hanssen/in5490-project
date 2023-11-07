@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{float}
 \usepackage{hyperref}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -94,11 +95,16 @@ For the implementation details of our PPO and the hyperparameters used, see the 
 
 \subsubsection{PPO with LLM Integrated in the Policy Function}
 
-In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the logits of the actions, thus influencing the probability weights of each action being taken so that semantically similar actions are weighted higher than others. We call this the Actor-Advisor-Critic Model.
+In this case, the LLM is integrated as part of the PPO algorithm, directly influencing the actions taken. This is done as follows: First, the observation is captioned and given as input to the LLM, which is prompted to suggest an action. Then, all actions that the agent could take given the current state are described in natural language. All possible actions are compared with the suggested action, and given a value which denotes their semantic similarity. These values are joined with the logits of the actions, thus influencing the probability weights of each action being taken so that semantically similar actions are weighted higher than others. We call this the Actor-Advisor-Critic model.
 
 \subsubsection{PPO with LLM Integrated in the Reward Function}
 
 The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM at every timestep. In addition to the state observation, the LLM is also asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, the LLM is used as a tool for semantic similarity comparison, comparing its own formerly proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards.
+
+\subsubsection{PPO with both LLM reward shaping and LLM policy influencing}
+
+Finally, we combine the two LLM integrations, hoping to combine the direct influence of our policy integration with the more indirect reward shaping. Thus, we are affecting the policy in two ways: Through reward shaping, we are causing the policy to update to better attain these pseudorewards, which will encourage completing of subgoals which are necessary to complete the actual goal of the environment, but which do not give out intermediate rewards. Through policy influencing, we are nudging the agent to take favorable actions by directly altering the action probabilities, which will make it more likely that the agent completes the given task and receives an actual reward from the environment. Thus, the agent will more quickly discover the correct policy.
+
 
 \subsection{Language Models}
 
@@ -139,7 +145,7 @@ Some environments can only be effectively solved by relying on language (for exa
 
 \subsection{Our chosen environments}
 
-We select three different Minigrid environments with increasing complexity; Empty, DoorKey and UnlockPickup. For each environment we test our three different models; PPO with no LLM integration, PPO with LLM reward shaping and PPO with LLM policy influencing. All methods use the same hyperparameters for the PPO, which can be found in the appendix. For each of these methods, we run PPO for 2000 (200 for Empty) episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results per episode against each other.
+We select three different Minigrid environments with increasing complexity; Empty, DoorKey and UnlockPickup. For each environment we test our four different models; PPO with no LLM integration, PPO with LLM reward shaping and PPO with LLM policy influencing. All methods use the same hyperparameters for the PPO, which can be found in the appendix. For each of these methods, we run PPO for 2000 (200 for Empty) episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results per episode against each other.
 
 \subsubsection{Empty environment}
 
@@ -167,9 +173,25 @@ In this simple environment, we see that both LLM reward shaping and LLM policy i
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/emptyresults.png}}
-\caption{Reward per episode for the three different methods in the Empty environment}
+\caption{Reward per episode for the four different methods in the Empty environment}
 \label{doorkeyresults}
 \end{figure}
+
+\begin{table}[h]
+\caption{All results on Empty environment}
+\begin{center}
+\label{emptytable}
+\begin{tabular}{c | c c c}
+Method & Mean reward & Std reward & Increase over baseline \\
+\hline
+Baseline & 0.99 & 1 & 0\% \\
+Reward shaping & 0.99 & 1 & 30\% \\
+Policy influencing & 0.99 & 1 & -7\% \\
+Both & 0.99 & 1 & 36\% \\
+\end{tabular}
+\end{center}
+\end{table}
+
 
 \subsection{DoorKey environment}
 
@@ -179,12 +201,27 @@ As we can see from Figure \ref{doorkeyresults}, LLM reward shaping gives a notic
 
 Using LLM policy influencing in the DoorKey environment has resulted in somewhat worse results than using the PPO baseline. Averaging per episode over all eight runs shows that LLM policy influencing only achieves $89\%$ of the reward amount per episode that the baseline achieves. Judging from the graph, it may seem that policy influencing may have given some initial learning advantage, but ultimately slows learning for the agent further on. The method also gives the highest standard deviation of reward given per episode of the three compared so far, at $0.25$. As with reward shaping, we have also used caching of LLM responses to significantly decrease the computational overhead cost to a minimum. 
 
+\begin{table}[h]
+\caption{All results on DoorKey environment}
+\begin{center}
+\label{doorkeytable}
+\begin{tabular}{c | c c c}
+Method & Mean reward & Std reward & Increase over baseline \\
+\hline
+Baseline & 0.99 & 1 & 0\% \\
+Reward shaping & 0.99 & 1 & 30\% \\
+Policy influencing & 0.99 & 1 & -7\% \\
+Both & 0.99 & 1 & 36\% \\
+\end{tabular}
+\end{center}
+\end{table}
+
 % ***TODO: add paragraph about using both together*** 
 % However, the results from both of these methods are eclipsed by the results from combining LLM reward shaping and policy influencing together. Averaging over 8 runs, we observe a NUMBER\% increase in reward from the environment compared to PPO alone, NUMBER\% higher than reward shaping and NUMBER\%higher than policy influencing, with a similar standard deviation of NUMBER. 
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/doorkeyresults.png}}
-\caption{Reward per episode for the three different methods in the DoorKey environment}
+\caption{Reward per episode for the four different methods in the DoorKey environment}
 \label{doorkeyresults}
 \end{figure}
 
@@ -194,11 +231,26 @@ The Unlock Pickup environment is an even more complex environment than DoorKey, 
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/unlockpickupresults.png}}
-\caption{Reward per episode for the three different methods in the UnlockPickup environment}
+\caption{Reward per episode for the four different methods in the UnlockPickup environment}
 \label{unlockpickupresults}
 \end{figure}
 
 Looking at figure \ref{unlockpickupresults}, we can see that all methods struggle. However, we see that the LLM reward shaping performs much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given that terrible performance of the baseline, LLM reward shaping achieved a percentage increase of over $700\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0089$ (with a standard deviation of $0.015$), while LLM reward shaping achieved an average reward of $0.062$ (with a standard deviation of $0.081$).
+
+\begin{table}[h]
+\caption{All results on UnlockPickup environment}
+\begin{center}
+\label{unlockpickuptable}
+\begin{tabular}{c | c c c}
+Method & Mean reward & Std reward & Increase over baseline \\
+\hline
+Baseline & 0.99 & 1 & 0\% \\
+Reward shaping & 0.99 & 1 & 30\% \\
+Policy influencing & 0.99 & 1 & -7\% \\
+Both & 0.99 & 1 & 36\% \\
+\end{tabular}
+\end{center}
+\end{table}
 
 {\it TODO: Add results from policy influencing}
 
@@ -247,7 +299,7 @@ We would like to acknowledge the ROBIN research group at the University of Oslo 
 \label{unlockpickupenv}
 \end{figure}
 
-\begin{table*}[h]
+\begin{table}[h]
 \caption{PPO hyperparameters}
 \begin{center}
 \label{hyperparams_transposed}
@@ -264,7 +316,7 @@ Entropy coeff. & 0 \\
 Learning rate & 3.0e-4 \\
 \end{tabular}
 \end{center}
-\end{table*}
+\end{table}
 
 
 
