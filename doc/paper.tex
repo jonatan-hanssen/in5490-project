@@ -44,7 +44,7 @@ jonatahh@ifi.uio.no}
 
 \begin{abstract}
 
-Reinforcement Learning (RL) algorithms suffer when rewards are sparse and the state-action space is large. Even tasks which seem relatively simple can prove intractable if the completion of the task requires subtasks to be completed first, or if the reward only comes when the entire task has been completed. In such cases, random exploration is unlikely to lead the agent to discover a solution to the problem. The apparent simplicity of such problems is often due to human intuition, which allow us to quickly see possible solutions to a diverse set of problems. Large Language Models (LLMs) are trained on large corpora of human written text, and have been shown to capture parts of this intuition in many tasks. In recent years, LLMs have been successfully used to aid RL agents in more efficient exploration, and have allowed them to solve problems which previous methods have been unable to. We compare different methods for integrating an LLM into the Deep Learning RL algorithm Proximal Policy Optimization (PPO), and compare their efficiency against each other. \footnote{Code available at \href{https://github.com/jonatan-hanssen/in5490-project}{github}}
+Reinforcement Learning (RL) algorithms suffer when rewards are sparse and the state-action space is large. Even tasks which seem relatively simple can prove intractable if the completion of the task requires subtasks to be completed first, or if the reward only comes when the entire task has been completed. In such cases, random exploration is unlikely to lead the agent to discover a solution to the problem. The apparent simplicity of such problems is often due to human intuition, which allow us to quickly see possible solutions to a diverse set of problems. Large Language Models (LLMs) are trained on large corpora of human written text, and have been shown to capture parts of this intuition in many tasks. In recent years, LLMs have been successfully used to aid RL agents in more efficient exploration, and have allowed them to solve problems which previous methods have been unable to. We compare different methods for integrating an LLM into the Deep Learning RL algorithm Proximal Policy Optimization (PPO), and compare their efficiency against each other. \footnote{Code available at \href{https://github.com/jonatan-hanssen/in5490-project}{GitHub}}
 
 \end{abstract}
 
@@ -100,7 +100,7 @@ In this case, the LLM is integrated as part of the PPO algorithm, directly influ
 
 \subsubsection{PPO with LLM Integrated in the Reward Function}
 
-The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM at every timestep. In addition to the state observation, the LLM is also asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, the LLM is used as a tool for semantic similarity comparison, comparing its own formerly proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional pseudo-reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards, which only take effect when the policy is updated through backpropogation after an entire episode is completed. Thus, this method functions more as an advisor, influencing the policy in a more long term capacity than the coaching of the policy influencer. Throughout the paper, we will refer to this as LLM reward shaping.
+The agent is trained as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM at every timestep. After being given the state observation, the LLM is asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, another LLM is used for semantic similarity comparison, comparing the proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional pseudo-reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards, which only take effect when the policy is updated through backpropogation after an entire episode is completed. Thus, this method functions more as an advisor, influencing the policy in a more long term capacity than the coaching of the policy influencer. Throughout the paper, we will refer to this as LLM reward shaping.
 
 \subsubsection{PPO with both LLM reward shaping and LLM policy influencing}
 
@@ -109,15 +109,15 @@ Finally, we combine the two LLM integrations, hoping to combine the direct influ
 
 \subsection{Language Models}
 
-In both these cases, we need two language models; one to generate the suggestions and one to generate semantic similarity values.
+In all these cases, we need two language models; one to generate the suggestions and one to generate semantic similarity values.
 
-For text generation, we have decided utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we chose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama 2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
+For text generation, we have decided to utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we chose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama 2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect and cost of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
 
-Some research papers propose fine-tuning of LLMs as means of leveraging the capabilites of the language models for decision-making purposes even further \cite{grounding}. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, this is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
+Some research papers propose fine-tuning of LLMs as a means of leveraging the capabilites of the language models for decision-making purposes even further \cite{grounding}. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, this is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
 
 Instead of fine tuning the LLM, we use few-shot learning when prompting, giving the LLM a few examples of observations and correct corresponding action recommendations. This is an effective way to guide the LLM for our specific purposes without requiring us to retrain the entire network.
 
-For generating semantic similarity values, we use Sentence-Bert \cite{bert} for generating encoding vectors, and perform a cosine similarity calculation of the two sentence encodings. This gives a value between $-1$ and $1$, where two sentences with the exact same encoding have a cosine similarity of $1$.
+For generating semantic similarity values, we follow \cite{ellm} and use Sentence-Bert \cite{bert} for generating encoding vectors, and perform a cosine similarity calculation of the two sentence encodings. This gives a value between $-1$ and $1$, where two sentences with the exact same encoding have a cosine similarity of $1$.
 
 
 \section{Experiments}
@@ -139,7 +139,7 @@ With no intermediate rewards, more complex environments like the one shown in Fi
 
 \subsection{Our chosen environments}
 
-We select three different Minigrid environments with increasing complexity; Empty, DoorKey and UnlockPickup. For each environment we test our four different models; PPO with no LLM integration, PPO with LLM reward shaping and PPO with LLM policy influencing. All methods use the same hyperparameters for the PPO, which can be found in the appendix. For each of these methods, we run PPO for 2000 (200 for Empty) episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results per episode against each other.
+We select three different Minigrid environments with increasing complexity; Empty, DoorKey and UnlockPickup. For each environment we test our four different models; PPO with no LLM integration, PPO with LLM reward shaping, PPO with LLM policy influencing and PPO with both reward shaping and policy influencing (A2C2). All methods use the same hyperparameters for the PPO, which can be found in the appendix. For each of these methods, we run PPO for 2000 (200 for Empty) episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results per episode against each other.
 
 \subsubsection{Empty environment}
 
@@ -175,14 +175,14 @@ This section outlines the results of our experiments in each of our selected env
 \subsubsection{Empty environment}
 \label{emptyresultstext}
 
-In this simple environment, we see that both LLM reward shaping, LLM policy influencing and A2C2 outperform the baseline model. Averaging over all episodes for all eight runs, we find that reward shaping increases the mean reward received by $10\%$ over the baseline, with a lower standard deviation in rewards received per run of $0.12$. Policy influencing scores even higher at $32\%$ over the baseline, with an even lower standard deviation of $0.09$. Finally, A2C2 performs the best of the four with a $37\%$ increase in average reward over the baseline model, and the lowest standard deviation of $0.04$
+In this simple environment, we see from Figure \ref{emptyresults} that both LLM reward shaping, LLM policy influencing and A2C2 outperform the baseline model. Averaging over all episodes for all eight runs, we find that reward shaping increases the mean reward received by $10\%$ over the baseline, with a lower standard deviation in rewards received per run of $0.12$. Policy influencing scores even higher at $32\%$ over the baseline, with an even lower standard deviation of $0.09$. Finally, A2C2 performs the best of the four with a $37\%$ increase in average reward over the baseline model, and the lowest standard deviation of $0.04$. See Table \ref{emptytable}.
 
 Notably, both policy influencing and A2C2 receive much higher rewards than reward shaping and the baseline right from the first episode. This makes sense as the environment is so simple that the LLM seems not to have any problem giving sensible instructions to directly influence the policy most of the time. However, we notice from the graph that policy influencing alone consistently gives a significant dip in received reward after the first few episodes, which it later compensates for, following a similar trajectory to that of reward shaping after about 50 episodes. We believe this could be a sign of the policy influencing being somewhat overly influential in changing the logits early on, because the logits initially have low values. As the PPO learns the environment, the magnitude of the logits increases, which at some point leads to conflicting contributions to the logits from the LLM and from the PPO. As the dip stops and performance increases again, this is likely due to the PPO becoming more influencing than the LLM after having started to learn the environment properly. We also notice that this dip is completely removed with A2C2, which could signify that the added reward shaping helps the PPO learn faster, enabling it to increase the influence from PPO on the logits faster.
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/emptyresults.png}}
 \caption{Reward per episode for the four different methods in the Empty environment}
-\label{doorkeyresults}
+\label{emptyresults}
 \end{figure}
 
 \begin{table}[h]
@@ -195,7 +195,7 @@ Method & Mean reward & Std reward & Increase over baseline \\
 Reward shaping & 0.76 & 0.12 & 10\% \\
 Policy influencing & 0.91 & 0.09 & 32\% \\
 Both & 0.95 & 0.04 & 37\% \\
-Baseline & 0.69 & 0.28 & 0\% \\
+Baseline & 0.69 & 0.28 & - \\
 \end{tabular}
 \end{center}
 \end{table}
@@ -203,7 +203,14 @@ Baseline & 0.69 & 0.28 & 0\% \\
 
 \subsubsection{DoorKey environment}
 
-As we can see from Figure \ref{doorkeyresults}, we see impressive results from our LLM integration in this environment as well, especially from reward shaping and A2C2. For the mean and standard deviation of all methods, see table \ref{doorkeytable}.
+As we can see from Figure \ref{doorkeyresults}, LLM integration gives impressive results in this environment as well, especially from reward shaping and A2C2. For the mean and standard deviation of all methods, see table \ref{doorkeytable}.
+
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/doorkeyresults.png}}
+\caption{Reward per episode for the four different methods in the DoorKey environment}
+\label{doorkeyresults}
+\end{figure}
 
 \begin{table}[h]
 \caption{All results on DoorKey environment}
@@ -215,7 +222,7 @@ Method & Mean reward & Std reward & Increase over baseline \\
 Reward shaping & 0.48 & 0.28 & 24\% \\
 Policy influencing & 0.36 & 0.31 & -6\% \\
 Both & 0.53 & 0.25 & 38\% \\
-Baseline & 0.38 & 0.31 & 0\% \\
+Baseline & 0.38 & 0.31 & - \\
 \end{tabular}
 \end{center}
 \end{table}
@@ -226,15 +233,10 @@ Looking at LLM policy influencing, we see that it has resulted in somewhat worse
 
 Regardless, the results from both of these methods are eclipsed by the results from combining LLM reward shaping and policy influencing together in our A2C2 model. Averaging over 8 runs, we observe a $38\%$ increase in reward from the environment compared to PPO alone, which is significantly higher than both policy influencing and reward shaping. Furthermore, it has the lowest standard deviation of all methods, at $0.25$. Clearly, the combination of immediate direct suggestions from the policy influencer and long term indirect suggestions from the reward shaper is a favourable way of integrating the LLM with PPO, which gives results which are better than the sum of its parts, not only in the simple Empty environment, but also in more complicated environments like DoorKey.
 
-\begin{figure}[h]
-\centerline{\includegraphics[width=3.25in]{figure/doorkeyresults.png}}
-\caption{Reward per episode for the four different methods in the DoorKey environment}
-\label{doorkeyresults}
-\end{figure}
 
 \subsubsection{Unlock Pickup environment}
 
-The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity makes the average reward much lower, and can see from Fig. \ref{unlockpickupresults} that all methods struggle (keep in mind the the y-axis now only goes to $0.15$, as opposed to the maximum reward possible of $1$, which the other graphs use).
+The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity makes the average reward much lower, and we can see from Figure \ref{unlockpickupresults} that all methods struggle (keep in mind the the y-axis now only goes to $0.15$, as opposed to the maximum reward possible of $1$, which the other graphs use).
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/unlockpickupresults.png}}
@@ -254,19 +256,19 @@ Method & Mean reward & Std reward & Increase over baseline \\
 Reward shaping & 0.037 & 0.082 & 275\% \\
 Policy influencing & 0.014 & 0.034 & 43\% \\
 Both & 0.031 & 0.072 & 222\% \\
-Baseline & 0.0097 & 0.025 & 0\% \\
+Baseline & 0.0097 & 0.025 & - \\
 \end{tabular}
 \end{center}
 \end{table}
 
-Looking at figure \ref{unlockpickupresults}, we can see that policy influencing also struggles in this environment. From table \ref{unlockpickuptable}, we see a $43\%$ increase, although this is not very impressive given the low score of the baseline, and it is difficult to see an upward trend in the amount of reward received, which can be clearly seen in the reward shaping method. Policy influencing received a mean average score of $0.014$. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game. Thus, while the results are better than the baseline, they are still very poor and we do not consider policy influencing to be particularly beneficial in this environment.
+Looking at figure \ref{unlockpickupresults}, we can see that policy influencing also struggles in this environment. From table \ref{unlockpickuptable}, we see a $43\%$ increase, although this is not very impressive given the low score of the baseline, and it is difficult to see an upward trend in the amount of reward received, which can be clearly seen in both reward shaping and A2C2. Policy influencing received a mean score of $0.014$. In this complicated environment, it may be that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game. Thus, while the results are better than the baseline, they are still very poor and we do not consider policy influencing to be particularly beneficial in this environment.
 
 Our A2C2 performs much better than only policy influencing, but in this case we are not able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of $0.072$, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
 
 \subsection{Inspecting the LLM responses}
 \label{llmresponse}
 
-Having looked at the performance of our different models, we can see that the suggestions from the LLM have positive effects in many cases, while also sometimes being detrimental. We now inspect some sample responses from the LLM, to gain deeper understanding of how the LLM is effecting the agent.
+Having looked at the performance of our different models, we can see that the suggestions from the LLM have positive effects in many cases, while also sometimes being detrimental. We now inspect some sample responses from the LLM, to gain deeper understanding of how the LLM is affecting the agent.
 
 \subsubsection{Empty}
 
@@ -279,7 +281,8 @@ From table \ref{emptyresponses} we see that the suggestions are very good, which
 \begin{tabularx}{3.25in}{X | X}
 Prompt & Response \\
 \hline
-My goal is: get to the green goal square. I see a green goal left and forward & move forward. \\
+My goal is: get to the green goal square. I see nothing interesting. & move forward. \\
+My goal is: get to the green goal square. I see a green goal left and forward. & move forward. \\
 My goal is: get to the green goal square. I see a green goal left. & move left. \\
 My goal is: get to the green goal square. I see a green goal directly in front. & move forward.
 \end{tabularx}
@@ -288,7 +291,7 @@ My goal is: get to the green goal square. I see a green goal directly in front. 
 
 \subsubsection{DoorKey}
 
-From table \ref{doorkeyresponses} we can see that some suggestions are good, such as suggestion to pick up a key when it is directly in front, and moving towards the goal although other observations are also present. We also see some suboptimal responses, such as suggesting to pick up a key when it is not directly in front and suggesting to pick up a key when it is already in the players inventory. These poor responses can explain why policy influencing can have a detrimental impact in this environment, as these actions will always be sampled slightly more often.
+From table \ref{doorkeyresponses} we can see that some suggestions are good, such as suggestion to pick up a key when it is directly in front, and moving towards the goal although other observations are also present. We also see some suboptimal responses, such as suggesting to pick up a key when it is not directly in front and suggesting to pick up a key when it is already in the player's inventory. These poor responses can explain why policy influencing can have a detrimental impact in this environment, as these actions will always be sampled slightly more often.
 
 \begin{table}[h]
 \caption{Sample responses from LLM in DoorKey environment. Good responses above line and suboptimal responses below. GOAL is equal to {\it use the key to open the door and then get to the goal}}
@@ -309,7 +312,7 @@ My goal is: GOAL. I see a green goal left and forward, have a yellow key in my i
 
 \subsubsection{UnlockPickup}
 
-On our final environment, we can see (Table \ref{unlockpickupresponses}) beneficial responses similar to the ones given in DoorKey. Here, we also see some absurd responses, which show that the LLM has completely misunderstood the prompt and few-shot examples. These responses are not particularly common, but they do occur sometimes and reveal some of the problems with running a relatively small LLM locally, as opposed to a larger model such as GPT4.
+On our final environment, we can see (Table \ref{unlockpickupresponses}) beneficial responses similar to the ones given in DoorKey. Here, we also see some absurd responses, which show that the LLM has completely misunderstood the prompt and few-shot examples. These responses are not particularly common, but they do occur sometimes and reveal some of the problems with running a relatively small LLM locally, as opposed to a larger model such as GPT4. These problems have been attempted remedied through prompt engineering (see the Appendix).
 
 \begin{table}[h]
 \caption{Sample responses from LLM in UnlockPickup environment. Good responses above line and suboptimal responses below.}
@@ -318,7 +321,7 @@ On our final environment, we can see (Table \ref{unlockpickupresponses}) benefic
 \begin{tabularx}{3.25in}{X | X}
 Prompt & Response \\
 \hline
-My goal is: pick up the blue box. I see a locked red door LEFT and FORWARD, see a red key directly in front. & pick up red key. \\
+My goal is: pick up the blue box. I see a locked red door left and forward, see a red key directly in front. & pick up red key. \\
 \hline
 My goal is: pick up the grey box. I have a grey key in my inventory. & Congratulations, you have successfully reached your goal! You find a small, mysterious box inside the grey box. It's made of a strange, otherworldly material that seems to glow with an ethereal light. As you examine it closer, you can feel a faint hum of energy emanating from it. \\
 My goal is: pick up the green box. I have a purple key in my inventory. & Great! With the purple key in your inventory, you can now unlock the green box. You approach the green box and use the purple key to unlock it. Inside, you find a shiny coin!
@@ -363,7 +366,7 @@ In the further development of this and similar algorithms, we also consider it e
 
 \section*{Acknowledgment}
 
-We would like to acknowledge the ROBIN research group at the University of Oslo Dept. of Informatics, who have arranged for us to be able to undertake this research and gain valuable experience. In particular, we would like to thank our supervisors Katrine Nergård and Kai Olav Ellefsen for their help and guidance in this project.
+We would like to acknowledge the ROBIN research group at the University of Oslo Department of Informatics, who have arranged for us to be able to undertake this research and gain valuable experience. In particular, we would like to thank our supervisors Katrine Nergård and Kai Olav Ellefsen for their help and guidance in this project.
 
 \bibliographystyle{apalike}
 \bibliography{bibliography}
@@ -371,6 +374,13 @@ We would like to acknowledge the ROBIN research group at the University of Oslo 
 
 \section*{Appendix}
 
+\subsection{Prompt given to Llama2}
+
+Below is the system prompt sent to Llama2, which is prepended before any state observation:
+
+{\it You are a helpful assistant giving advice to someone playing a videogame. You will recieve the current goal of the game and a list of observations about the objects in the environment and their positions relative to the player at one single timestep. You shall give a list of suggested actions that the player will take to reach their goal during this single timestep. The available actions to the player are: move forward, turn left and right, pick up items, drop items and use items. You MUST ALWAYS RESPOND with one or more of these actions. Your response MUST ALWAYS follow the template of the given example responses. NEVER ADD anything not in the example responses. You will NEVER ASSUME that other possible actions exist. You will NEVER ASSUME that the game is finished. You WILL NEVER make any other assumptions about the environment, only use the information given to you. If none of the observations are relevant to solving the task, respond that the player should turn around and explore more. Separate each suggestion with a new line. Be concise. ONLY FOLLOW THESE INSTRUCTIONS. NEVER RESPOND IN ANY OTHER WAY. OTHERWISE, YOU WILL BE SEVERELY PUNISHED.}
+
+\subsection{Figures and tables}
 
 \begin{table}[h]
 \caption{PPO hyperparameters}
@@ -380,12 +390,12 @@ We would like to acknowledge the ROBIN research group at the University of Oslo 
 Parameter & Value \\
 \hline
 Gamma & 0.99 \\
-Steps/episode & 1024 \\
-Epochs/episode & 10 \\
-Batches/epoch & 8 \\
-Clip & 0.2 \\
-Value loss coeff. & 0.3 \\
-Entropy coeff. & 0 \\
+Steps per episode & 1024 \\
+Epochs per episode & 10 \\
+Batches per epoch & 8 \\
+PPO Clipping value & 0.2 \\
+Value loss coefficient & 0.3 \\
+Entropy coefficient & 0 \\
 Learning rate & 3.0e-4 \\
 \end{tabular}
 \end{center}
