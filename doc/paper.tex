@@ -135,7 +135,7 @@ For our experiments, we choose the Minigrid library. The Minigrid library contai
 \end{figure}
 
 
-With no intermediate rewards, more complex environments like the one shown in Figure \ref{unlockpickupenv} quickly become difficult to learn for traditional RL methods. Some environments can only be effectively solved by relying on language (for example, environments where the goal text describes a specific object to be picked up, which changes every time), while others can be solved without (for example, if the goal always is to pick up a key). We only use environments that can be solved without language, so that the baseline PPO algorithm is not at an unfair disadvantage.
+With no intermediate rewards, more complex environments like the one shown in Figure \ref{unlockpickupenv} quickly become difficult to learn for traditional RL methods. In addition, some environments can only be effectively solved by relying on language (for example, environments where the goal text describes a specific object to be picked up, which changes every time), while others can be solved without (for example, if the goal always is to pick up a key). We only use environments that can be solved without language, so that the baseline PPO algorithm is not at an unfair disadvantage.
 
 \subsection{Our chosen environments}
 
@@ -347,13 +347,13 @@ Overall, we found that the LLM can be a valuable asset in the RL framework, but 
 
 In accordance with the NeurIPS Code of Ethics \cite{ethics}, we outline ethical considerations related to this project, covering potential consequences from the research, and how potential risks may be mitigated. Considering that our research does not involve participants nor sensitive data, concerns related to how such factors are treated will not be discussed.
 
-\subsection{Societal Impact and Potential Harmful Consequences}
+\subsection*{Societal Impact and Potential Harmful Consequences}
 
 Due to how this research project revolves around the integration of LLMs in the RL domain, many of the same concerns that exist in the domain of LLMs themselves are extended to the RL domain. A major concern is that of safety; if the RL agent is to act in an environment where failure to act optimally could be critical, it is paramount that the agent does not enter bad states due to the existing randomness in the RL framework. The LLM in itself predicts stochastically, and thus may add even more noise to the framework. In the worst case, it could amplify probabilities of the agent choosing dangerous actions due to this added noise.
 
 Another topic of concern is that of bias and fairness; the premise for why an LLM might help an RL agent in a large environment is because of its inherent human knowledge, stemming from the human-written texts it has been trained upon. However, human-written texts are an obvious potential source to biased opinions, and the LLM may have learned such biased and/or unfair opinions. Then, in an example where the RL agent is deployed in environments where an ethical choice has to be made, this choice could be influenced by whatever bias may be present in what the LLM suggests to the agent.
 
-\subsection{Impact Mitigation Measures}
+\subsection*{Impact Mitigation Measures}
 
 As is exemplified above, major ethical concerns regarding the use of our proposed algorithms arise when they are deployed for critical tasks, for instance tasks in real-life dangerous environments, or environments where ethical considerations have to be addressed. Therefore, an agent trained on our proposed RL framework for such critical tasks should be carefully tested before deployment to see if, and how often, critical deviations occur.
 
