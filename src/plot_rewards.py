@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("environment")
 parser.add_argument("-w", "--window", type=int, default=20)
+parser.add_argument("-l", "--limit", type=float, default=1.0)
 args = parser.parse_args()
 
 
@@ -87,7 +88,7 @@ print(f"Increase both over reward: {means_list[2] / means_list[0]}")
 print(f"Increase both over policy: {means_list[2] / means_list[1]}")
 
 
-plt.ylim(0, 1)
+plt.ylim(0, args.limit)
 plt.title(f"Average reward per episode\n on {args.environment} environment")
 plt.xlabel("Episodes")
 plt.ylabel("Reward")
