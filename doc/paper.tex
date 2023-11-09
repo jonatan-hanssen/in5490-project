@@ -126,7 +126,7 @@ We perform experiments to compare different methods of integrating LLMs with the
 
 \subsection{Minigrid Environments}
 
-For our experiments, we choose the Minigrid library. The Minigrid library contains simple grid world environments. An important characteristic of all these environments is that they only give reward on the completion of the goal of the environment. In other words, the environment only ever gives out a single reward per episode, given that the agent completes its task. Goals in Minigrid are often simple tasks, such as "unlock the door", "go to the goal", "pick up the red chest", etc. Completing these goals often requires the completion of subtasks; going to the goal might require opening a door, and opening the door might require picking up a key. These environments are partially observable, which means that the agent only receives a seven by seven observation grid, not the entire grid. Figure \ref{doorkeyenv}, shows a typical minigrid environment. In this case, the agent (the red arrow) only sees the left room, and does not know where the goal is.
+For our experiments, we choose the Minigrid library. The Minigrid library contains simple grid world environments. An important characteristic of all these environments is that they only give reward on the completion of the goal of the environment. In other words, the environment only ever gives out a single reward per episode, given that the agent completes its task. Goals in Minigrid are often simple tasks, such as "unlock the door", "go to the goal", "pick up the red chest", etc. Completing these goals often requires the completion of subtasks; going to the goal might require opening a door, and opening the door might require picking up a key. These environments are partially observable, which means that the agent only receives a seven by seven observation grid, not the entire grid. Figure \ref{doorkeyenv}, shows a typical minigrid environment. In this case, the agent (the red arrow) only sees the left room, and does not know where the goal is. 
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/doorkeyenv.png}}
@@ -134,15 +134,8 @@ For our experiments, we choose the Minigrid library. The Minigrid library contai
 \label{doorkeyenv}
 \end{figure}
 
-A more complicated environment can be seen in figure \ref{blockedunlockpickupenv}. Completing the goal requires picking up the ball and dropping it somewhere else, picking up the key, using it to unlock the door, dropping the key (the agent can only carry one item at once) and finally picking up the box. With no intermediate rewards, this is a very difficult task for traditional RL methods. The exact configuration of Minigrid environments is random; the position of the agent, the placement of the walls and items within the grid all vary from episode to episode.
 
-\begin{figure}[h]
-\centerline{\includegraphics[width=3.25in]{figure/blockedunlockpickupenv.png}}
-\caption{The Minigrid BlockedUnlockPickup environment}
-\label{blockedunlockpickupenv}
-\end{figure}
-
-Some environments can only be effectively solved by relying on language (for example, environments where the goal text describes a specific object to be picked up, which changes every time), while others can be solved without (for example, if the goal always is to pick up a key). We only use environments that can be solved without language, so that the baseline PPO algorithm is not at an unfair disadvantage.
+With no intermediate rewards, more complex environments like the one shown in Figure \ref{unlockpickupenv} quickly become difficult to learn for traditional RL methods. Some environments can only be effectively solved by relying on language (for example, environments where the goal text describes a specific object to be picked up, which changes every time), while others can be solved without (for example, if the goal always is to pick up a key). We only use environments that can be solved without language, so that the baseline PPO algorithm is not at an unfair disadvantage.
 
 \subsection{Our chosen environments}
 
@@ -150,7 +143,7 @@ We select three different Minigrid environments with increasing complexity; Empt
 
 \subsubsection{Empty environment}
 
-This environment is the simplest possible, consisting of an empty room with a single goal in the bottom right corner. This environment contains no stochasticity; the agent and goal always start in the same positions. Despite its simplicity, there is still potential for LLM integration to improve the early phases of training, because the room is 15 by 15 tiles, which means that receiving any reward requires a significant amount of exploration. The environment is seen in figure \ref{emptyenv}.
+This environment is the simplest possible, consisting of an empty room with a single goal in the bottom right corner. This environment contains no stochasticity; the agent and goal always start in the same positions. Despite its simplicity, there is still potential for LLM integration to improve the early phases of training, because the room is 15 by 15 tiles, which means that receiving any reward requires a significant amount of exploration. The environment is seen in Figure \ref{emptyenv}.
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/emptyenv.png}}
@@ -160,11 +153,18 @@ This environment is the simplest possible, consisting of an empty room with a si
 
 \subsubsection{DoorKey environment}
 
-This environment consists of two rooms separated by a locked door. Fig \ref{doorkeyenv} shows an example configuration. The agent starts in one room, while the goal square is in the other. The agent must pick up a key in the starting room, and use it on the door to gain access to the room containing the goal. This environment thus contains two subgoals; picking up the key and using it to unlock the door.
+This environment consists of two rooms separated by a locked door. Figure \ref{doorkeyenv} shows an example configuration. The agent starts in one room, while the goal square is in the other. The agent must pick up a key in the starting room, and use it on the door to gain access to the room containing the goal. This environment thus contains two subgoals; picking up the key and using it to unlock the door.
 
 \subsubsection{UnlockPickup environment}
+\label{unlockpickupdescription}
 
-This environment is quite similar to the DoorKey environment. Fig \ref{unlockpickupenv} shows an example configuration. The difference is that after unlocking the door, the agent must now pick up a chest instead of walking to a goal square. Because the agent can only hold one item at a time, this requires dropping the key on an empty square, which introduces another subtask. Chests can also be opened like doors, but this removes the chest from the game and thus causes and instant failure of the task, as it can no longer be picked up. Thus, the agent must learn that using a key on a door is a valuable subtask, while using it on a chest is a bad idea. This added complexity makes it a much more difficult task than the previous two.
+This environment is quite similar to the DoorKey environment. Figure \ref{unlockpickupenv} shows an example configuration. The difference is that after unlocking the door, the agent must now pick up a chest instead of walking to a goal square. Because the agent can only hold one item at a time, this requires dropping the key on an empty square, which introduces another subtask. Chests can also be opened like doors, but this removes the chest from the game and thus causes and instant failure of the task, as it can no longer be picked up. Thus, the agent must learn that using a key on a door is a valuable subtask, while using it on a chest is a bad idea. This added complexity makes it a much more difficult task than the previous two.
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/unlockpickupenv.png}}
+\caption{The Minigrid UnlockPickup environment}
+\label{unlockpickupenv}
+\end{figure}
 
 \section{Results}
 
@@ -259,9 +259,9 @@ Both & 0.99 & 1 & 36\% \\
 \end{center}
 \end{table}
 
-As is clear from the graph, policy influencing struggles in this environment as well, performing even worse than the baseline. Policy influencing received a mean average score of NUMBER, which is PERCENT lower than the baseline. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game.
+As is clear from the graph, policy influencing struggles in this environment as well, performing even worse than the baseline. Policy influencing received a mean average score of NUMBER, which is PERCENT lower than the baseline. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained in \ref{unlockpickupdescription}, this instantly loses the game by removing the box from the game.
 
-Our A2C2 performs much better than only policy influencing, but in this case we are not able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of NUMBER, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
+Our A2C2 performs much better than policy influencing, but in this case we are not able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of NUMBER, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
 
 \subsection{Inspecting the LLM responses}
 \label{llmresponse}
@@ -369,11 +369,6 @@ We would like to acknowledge the ROBIN research group at the University of Oslo 
 
 \section*{Appendix}
 
-\begin{figure}[h]
-\centerline{\includegraphics[width=3.25in]{figure/unlockpickupenv.png}}
-\caption{The Minigrid UnlockPickup environment}
-\label{unlockpickupenv}
-\end{figure}
 
 \begin{table}[h]
 \caption{PPO hyperparameters}
