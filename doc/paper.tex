@@ -212,19 +212,19 @@ As we can see from Figure \ref{doorkeyresults}, we see impressive results from o
 \begin{tabular}{c | c c c}
 Method & Mean reward & Std reward & Increase over baseline \\
 \hline
-Baseline & 0.99 & 1 & 0\% \\
-Reward shaping & 0.99 & 1 & 30\% \\
-Policy influencing & 0.99 & 1 & -7\% \\
-Both & 0.99 & 1 & 36\% \\
+Reward shaping & 0.48 & 0.28 & 24\% \\
+Policy influencing & 0.36 & 0.31 & -6\% \\
+Both & 0.53 & 0.25 & 38\% \\
+Baseline & 0.38 & 0.31 & 0\% \\
 \end{tabular}
 \end{center}
 \end{table}
 
 LLM reward shaping gives a noticable improvement to the performance of the model, not just in the early stages of training, but throughout the entire training process. Averaging over all episodes of all eight runs per model, we find that LLM reward shaping receives $24\%$ more reward per episode than PPO trained without LLM rewards. Furthermore, this is an improvement that comes at very little computational cost, because LLM responses can be cached between runs. Of the eight runs on this environment using LLM reward shaping, the last three runs never queried the LLM at all, only relying on the cache of previous answers.
 
-Looking at LLM policy influencing, we see that it has resulted in somewhat worse results than using the PPO baseline. Averaging per episode over all eight runs shows that LLM policy influencing only achieves $89\%$ of the reward amount per episode that the baseline achieves. Judging from the graph, it may seem that policy influencing may have given some initial learning advantage, but ultimately slows learning for the agent further on. The method also gives the highest standard deviation of reward given per episode of the three compared so far, at $0.25$. As with reward shaping, we have also used caching of LLM responses to significantly decrease the computational overhead cost to a minimum. 
+Looking at LLM policy influencing, we see that it has resulted in somewhat worse results than using the PPO baseline. Averaging per episode over all eight runs shows that LLM policy influencing only achieves $93\%$ of the reward amount per episode that the baseline achieves. Judging from the graph, it may seem that policy influencing may have given some initial learning advantage, but ultimately slows learning for the agent further on. As with reward shaping, we have also used caching of LLM responses to significantly decrease the computational overhead cost to a minimum. 
 
-However, the results from both of these methods are eclipsed by the results from combining LLM reward shaping and policy influencing together in our A2C2 model. Averaging over 8 runs, we observe a $34\%$ increase in reward from the environment compared to PPO alone, $8\%$ higher than reward shaping and $43\%$ higher than policy influencing, with the lowest standard deviation of all methods, at $0.22$. Clearly, the combination of immediate direct suggestions from the policy influencer and long term indirect suggestions from the reward shaper is a favourable way of integrating the LLM with PPO, which gives results which are better than the sum of its parts, not only in the simple Empty environment, but also in more complicated environments like DoorKey.
+Regardless, the results from both of these methods are eclipsed by the results from combining LLM reward shaping and policy influencing together in our A2C2 model. Averaging over 8 runs, we observe a $38\%$ increase in reward from the environment compared to PPO alone, which is significantly higher than both policy influencing and reward shaping. Furthermore, it has the lowest standard deviation of all methods, at $0.25$. Clearly, the combination of immediate direct suggestions from the policy influencer and long term indirect suggestions from the reward shaper is a favourable way of integrating the LLM with PPO, which gives results which are better than the sum of its parts, not only in the simple Empty environment, but also in more complicated environments like DoorKey.
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/doorkeyresults.png}}
@@ -234,15 +234,15 @@ However, the results from both of these methods are eclipsed by the results from
 
 \subsubsection{Unlock Pickup environment}
 
-The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity makes the average reward much lower, and we see that all methods struggle (figure \ref{unlockpickupresults}).
+The Unlock Pickup environment is an even more complex environment than DoorKey, requiring a much longer string of actions to give out a reward. As may be anticipated, this added complexity makes the average reward much lower, and can see from Fig. \ref{unlockpickupresults} that all methods struggle (keep in mind the the y-axis now only goes to $0.15$, as opposed to the maximum reward possible of $1$, which the other graphs use).
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/unlockpickupresults.png}}
-\caption{Reward per episode for the four different methods in the UnlockPickup environment}
+\caption{Reward per episode for the four different methods in the UnlockPickup environment. Note the y-axis, which only goes to $0.15$ as opposed to $1$}
 \label{unlockpickupresults}
 \end{figure}
 
-As we can see, LLM performs the best overall, and performs much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given the terrible performance of the baseline, LLM reward shaping achieved a percentage increase of over $700\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0089$ (with a standard deviation of $0.015$), while LLM reward shaping achieved an average reward of $0.062$ (with a standard deviation of $0.081$). See table \ref{unlockpickuptable}.
+As we can see, LLM reward shaping performs the best overall, and performs much better than vanilla PPO, which struggles to learn the correct policy in this complex environment. Given the terrible performance of the baseline, LLM reward shaping achieved a percentage increase of $275\%$, which is not that impressive when the average reward from the baseline was close to zero. The baseline achieved an average reward of $0.0097$, while LLM reward shaping achieved an average reward of $0.037$. See table \ref{unlockpickuptable}.
 
 \begin{table}[h]
 \caption{All results on UnlockPickup environment}
@@ -251,17 +251,17 @@ As we can see, LLM performs the best overall, and performs much better than vani
 \begin{tabular}{c | c c c}
 Method & Mean reward & Std reward & Increase over baseline \\
 \hline
-Baseline & 0.99 & 1 & 0\% \\
-Reward shaping & 0.99 & 1 & 30\% \\
-Policy influencing & 0.99 & 1 & -7\% \\
-Both & 0.99 & 1 & 36\% \\
+Reward shaping & 0.037 & 0.082 & 275\% \\
+Policy influencing & 0.014 & 0.034 & 43\% \\
+Both & 0.031 & 0.072 & 222\% \\
+Baseline & 0.0097 & 0.025 & 0\% \\
 \end{tabular}
 \end{center}
 \end{table}
 
-As is clear from the graph, policy influencing struggles in this environment as well, performing even worse than the baseline. Policy influencing received a mean average score of NUMBER, which is PERCENT lower than the baseline. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game.
+Looking at figure \ref{unlockpickupresults}, we can see that policy influencing also struggles in this environment. From table \ref{unlockpickuptable}, we see a $43\%$ increase, although this is not very impressive given the low score of the baseline, and it is difficult to see an upward trend in the amount of reward received, which can be clearly seen in the reward shaping method. Policy influencing received a mean average score of $0.014$. In this complicated environment, it may that suboptimal responses from the LLM have high chance to ruin the agent's chance to complete the goal, for example by suggesting to open the box instead of picking it up. As explained earlier, this instantly loses the game by removing the box from the game. Thus, while the results are better than the baseline, they are still very poor and we do not consider policy influencing to be particularly beneficial in this environment.
 
-Our A2C2 performs much better than only policy influencing, but in this case we are not able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of NUMBER, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
+Our A2C2 performs much better than only policy influencing, but in this case we are not able to combine the two LLM integrations to receive a performance higher than the sum of its parts. Here we receive a score of $0.072$, which is higher than the baseline and policy influencing, but not higher than reward shaping by itself. It may be that in this case, the performance of policy influencing is so poor that the combination is not able to utilize the best of both methods, instead only being dragged down by poor suggestions.
 
 \subsection{Inspecting the LLM responses}
 \label{llmresponse}
@@ -309,7 +309,7 @@ My goal is: GOAL. I see a green goal left and forward, have a yellow key in my i
 
 \subsubsection{UnlockPickup}
 
-On our final environment, we can see from table \ref{unlockpickupresponses}, such as suggestion to pick up a key when it is directly in front, and moving towards the goal although other observations are also present. We also see some suboptimal responses, such as suggesting to pick up a key when it is not directly in front and suggesting to pick up a key when it is already in the players inventory. These poor responses can explain why policy influencing can have a detrimental impact in this environment, as these actions will always be sampled slightly more often.
+On our final environment, we can see (Table \ref{unlockpickupresponses}) beneficial responses similar to the ones given in DoorKey. Here, we also see some absurd responses, which show that the LLM has completely misunderstood the prompt and few-shot examples. These responses are not particularly common, but they do occur sometimes and reveal some of the problems with running a relatively small LLM locally, as opposed to a larger model such as GPT4.
 
 \begin{table}[h]
 \caption{Sample responses from LLM in UnlockPickup environment. Good responses above line and suboptimal responses below.}
