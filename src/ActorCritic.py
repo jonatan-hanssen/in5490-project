@@ -49,7 +49,7 @@ class Agent(nn.Module):
         the agent is in.
     """
 
-    def __init__(self, env, llama=False, generator=None):
+    def __init__(self, env, llama=False, generator=None, policy_sim_thres=None, policy_sim_mod=None):
         super(Agent, self).__init__()
         self.critic = nn.Sequential(
             init_weightsNbias(nn.Linear(147 * 11, 64, dtype=torch.float64)),
@@ -70,7 +70,9 @@ class Agent(nn.Module):
         )
 
         goal = env.reset()[0]["mission"]
-        self.consigliere = llama2_policy(goal, cos_sim_threshold=0.84, similarity_modifier=0.1, generator=generator) if llama else None
+        threshold = 0.84 if policy_sim_thres is None else policy_sim_thres
+        modifier = 0.01 if policy_sim_mod is None else policy_sim_mod
+        self.consigliere = llama2_policy(goal, cos_sim_threshold=threshold, similarity_modifier=modifier, generator=generator) if llama else None
 
 
     def get_value(self, observation):
@@ -88,7 +90,6 @@ class Agent(nn.Module):
         logits = self.actor(observation_onehot)
 
         if self.consigliere:
-            #print(observation.shape)
             # logits /= torch.norm(logits)
             if len(observation.shape) == 2:
                 advisor_values_list = list()
@@ -105,16 +106,8 @@ class Agent(nn.Module):
                 #self.consigliere.suggest(unflat_obs)
                 advisor_values = self.consigliere.give_values(np.array(unflat_obs.cpu())).to(torch.float64)
 
-            # print(f"{logits=}")
-            # print(f"{advisor_values=}")
-            # # anti adrian propaganda
-            # logits += advisor_values
-            # adrian good vote adrian
-            # logits *= advisor_values
-
         probs = Categorical(logits=logits)
 
-        # print(probs.probs)
 
         if action is None:
             if self.consigliere:
@@ -128,17 +121,10 @@ class Agent(nn.Module):
                             anneal = 0
                     else:
                         anneal = 1
-                    # print(anneal)
                     scale_factor = (torch.norm(logits) / torch.norm(advisor_values))
-                    # print(f"{advisor_values=}")
-                    # print(f"{scale_factor=}")
-                    # print(f"{advisor_values * scale_factor=}")
-                    # print(f"{logits=}")
                     advisor_values = advisor_values.to(torch.device("cuda"))
                     newprobs = Categorical(logits=logits + advisor_values * scale_factor * anneal * self.consigliere.similarity_modifier)
                     action = newprobs.sample()
-                    # print(f"{probs.probs=}")
-                    # print(f"{newprobs.probs=}")
             else:
                 action = probs.sample()
         return (

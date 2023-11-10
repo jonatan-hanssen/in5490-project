@@ -25,6 +25,8 @@ class PPO:
         policy=None,
         generator=None,
         allow_farming=False,
+        policy_sim_thres=None,
+        policy_sim_mod=None,
     ):
         self.args = read_params(param_file)
 
@@ -41,7 +43,7 @@ class PPO:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.device = torch.device("cpu")
-        self.agent = Agent(self.env, self.llama_policy, generator=generator).to(
+        self.agent = Agent(self.env, self.llama_policy, generator=generator, policy_sim_thres=policy_sim_thres, policy_sim_mod=policy_sim_mod).to(
             self.device
         )
         self.optimizer = optim.Adam(
