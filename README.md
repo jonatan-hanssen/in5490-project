@@ -14,7 +14,7 @@ $ source env/bin/activate
 $ pip install -r requirements.txt
 ```
 
-You will also need the LLM model Llama2-7B-chat. To do this, you need a get an access key from Meta. This can be aquired by filling out this [form](https://ai.meta.com/resources/models-and-libraries/llama-downloads/). After recieveing the email, run ```download.sh``` and select ```7B-chat```.
+You will also need the LLM model Llama2-7B-chat. To do this, you need a get an access key from Meta. This can be aquired by filling out this [form](https://ai.meta.com/resources/models-and-libraries/llama-downloads/). After receiving the email, run ```download.sh``` and select ```7B-chat```.
 
 ## Results
 
