@@ -91,7 +91,7 @@ To evaluate the effectiveness of the integration of LLMs into Reinforcement Lear
 
 Our baseline is the PPO algorithm, which is a policy gradient method that has been established as a state-of-art approach to solving reinforcement learning problems over the last few years. The main idea behind this algorithm is that the new policy is clipped so that it does not move too quickly and too far from the old policy, which helps to avoid changing the policy too drastically during the update. With this simple concept, PPO has outperformed previous methods such as Deep-Q Networks and A2C, while being relatively simple to implement\cite{ppo}.
 
-For the implementation details of our PPO and the hyperparameters used, see the Appendix.
+For the hyperparameters used in our PPO implementation, see the \nameref{sec:appendixtext}.
 
 
 \subsubsection{PPO with LLM Integrated in the Policy Function}
@@ -111,7 +111,7 @@ Finally, we combine the two LLM integrations, hoping to combine the direct influ
 
 In all these cases, we need two language models; one to generate the suggestions and one to generate semantic similarity values.
 
-For text generation, we have decided to utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we chose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama 2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect and cost of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
+For text generation, we have decided to utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we choose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama 2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect and cost of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
 
 Some research papers propose fine-tuning of LLMs as a means of leveraging the capabilites of the language models for decision-making purposes even further \cite{grounding}. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, this is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
 
@@ -312,7 +312,7 @@ My goal is: GOAL. I see a green goal left and forward, have a yellow key in my i
 
 \subsubsection{UnlockPickup}
 
-On our final environment, we can see (Table \ref{unlockpickupresponses}) beneficial responses similar to the ones given in DoorKey. Here, we also see some absurd responses, which show that the LLM has completely misunderstood the prompt and few-shot examples. These responses are not particularly common, but they do occur sometimes and reveal some of the problems with running a relatively small LLM locally, as opposed to a larger model such as GPT4. These problems have been attempted remedied through prompt engineering (see the Appendix).
+On our final environment, we can see (Table \ref{unlockpickupresponses}) beneficial responses similar to the ones given in DoorKey. Here, we also see some absurd responses, which show that the LLM has completely misunderstood the prompt and few-shot examples. These responses are not particularly common, but they do occur sometimes and reveal some of the problems with running a relatively small LLM locally, as opposed to a larger model such as GPT4. These problems have been attempted remedied through prompt engineering (see the \nameref{sec:appendixtext}).
 
 \begin{table}[h]
 \caption{Sample responses from LLM in UnlockPickup environment. Good responses above line and suboptimal responses below.}
@@ -373,6 +373,7 @@ We would like to acknowledge the ROBIN research group at the University of Oslo 
 
 
 \section*{Appendix}
+\label{sec:appendixtext}
 
 \subsection{Prompt given to Llama2}
 
