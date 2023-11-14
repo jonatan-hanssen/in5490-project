@@ -137,9 +137,15 @@ For our experiments, we choose the Minigrid library. The Minigrid library contai
 
 With no intermediate rewards, more complex environments like the one shown in Figure \ref{unlockpickupenv} quickly become difficult to learn for traditional RL methods. In addition, some environments can only be effectively solved by relying on language (for example, environments where the goal text describes a specific object to be picked up, which changes every time), while others can be solved without (for example, if the goal always is to pick up a key). We only use environments that can be solved without language, so that the baseline PPO algorithm is not at an unfair disadvantage.
 
+\begin{figure}[h]
+\centerline{\includegraphics[width=3.25in]{figure/unlockpickupenv.png}}
+\caption{The Minigrid UnlockPickup environment}
+\label{unlockpickupenv}
+\end{figure}
+
 \subsection{Our chosen environments}
 
-We select three different Minigrid environments with increasing complexity; Empty, DoorKey and UnlockPickup. For each environment we test our four different models; PPO with no LLM integration, PPO with LLM reward shaping, PPO with LLM policy influencing and PPO with both reward shaping and policy influencing (A2C2). All methods use the same hyperparameters for the PPO, which can be found in the appendix. For each of these methods, we run PPO for 2000 (200 for Empty) episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results per episode against each other.
+We select three different Minigrid environments with increasing complexity; Empty, DoorKey and UnlockPickup. For each environment we test our four different models; PPO with no LLM integration, PPO with LLM reward shaping, PPO with LLM policy influencing and PPO with both reward shaping and policy influencing (A2C2). All methods use the same hyperparameters for the PPO, which can be found in the \nameref{sec:appendixtext}. For each of these methods, we run PPO for 2000 (200 for Empty) episodes of 1024 steps, and track the reward\footnote{The true environment reward, not including pseudo-rewards given by the LLM in reward shaping} received for each one. We do this eight times per method, and compare the average results per episode against each other.
 
 \subsubsection{Empty environment}
 
@@ -160,11 +166,6 @@ This environment consists of two rooms separated by a locked door. Figure \ref{d
 
 This environment is quite similar to the DoorKey environment. Figure \ref{unlockpickupenv} shows an example configuration. The difference is that after unlocking the door, the agent must now pick up a chest instead of walking to a goal square. Because the agent can only hold one item at a time, this requires dropping the key on an empty square, which introduces another subtask. Chests can also be opened like doors, but this removes the chest from the game and thus causes and instant failure of the task, as it can no longer be picked up. Thus, the agent must learn that using a key on a door is a valuable subtask, while using it on a chest is a bad idea. This added complexity makes it a much more difficult task than the previous two.
 
-\begin{figure}[h]
-\centerline{\includegraphics[width=3.25in]{figure/unlockpickupenv.png}}
-\caption{The Minigrid UnlockPickup environment}
-\label{unlockpickupenv}
-\end{figure}
 
 \section{Results}
 
