@@ -54,9 +54,9 @@ large language models, reinforcement learning, minigrid, proximal policy optimiz
 
 \section{Introduction}
 
-One of the central challenges of reinforcement learning is that rewards are often both extremely rare and delayed, which means that optimizing a reinforcement learning algorithm requires significant trial and error \cite[423]{brunton}. Furthermore, in many problems the state-action spaces are enormous, meaning that uniform exploration is unlikely to find good solutions in a reasonable amount of time. Many methods have been developed to deal with this issue, for example by introducing auxilliary reward functions that use domain knowledge to reward actions which are considered good, or which reward the agent for learning novel skills. However, hand picking which actions to reward can lead to imitation rather than optimal behaviour, and novelty is not always useful \cite[1]{ellm}. In recent years, LLMs have shown remarkable capabilities in problem solving and planning \cite{sparks}, qualities which traditional RL agents often lack. Thus, a new area of research has emerged, which attempts to use the vast amount of human knowledge encoded in these models to improve the performance of reinforcement learning algorithms \cite{survey}. These LLM assisted RL agents have been able to outperform state-of-the-art RL methods in many problems \cite{omni, ellm, idm}.
+One of the central challenges of reinforcement learning is that rewards are often both extremely rare and delayed, which means that optimizing a reinforcement learning algorithm requires significant trial and error \cite[423]{brunton}. Furthermore, in many problems the state-action spaces are enormous, meaning that uniform exploration is unlikely to find good solutions in a reasonable amount of time. Many methods have been developed to deal with this issue, for example by introducing auxiliary reward functions that use domain knowledge to reward actions which are considered good, or which reward the agent for learning novel skills. However, hand picking which actions to reward can lead to imitation rather than optimal behaviour, and novelty is not always useful \cite[1]{ellm}. In recent years, LLMs have shown remarkable capabilities in problem solving and planning \cite{sparks}, qualities which traditional RL agents often lack. Thus, a new area of research has emerged, which attempts to use the vast amount of human knowledge encoded in these models to improve the performance of reinforcement learning algorithms \cite{survey}. These LLM assisted RL agents have been able to outperform state-of-the-art RL methods in many problems \cite{omni, ellm, idm}.
 
-These papers explore different methods of integrating LLMs into a standard reinforcement learning training loop, from altering the policy directly to introducing an auxilliary reward function. In this paper, we compare both methods in the same environment using the same deep reinforcement algorithm (PPO), and compare their results to each other to explore how LLMs best can be integrated into RL.
+These papers explore different methods of integrating LLMs into a standard reinforcement learning training loop, from altering the policy directly to introducing an auxiliary reward function. In this paper, we compare both methods in the same environment using the same deep reinforcement algorithm (PPO), and compare their results to each other to explore how LLMs best can be integrated into RL.
 
 \section{Background and Related Work}
 \label{background}
@@ -89,7 +89,7 @@ To evaluate the effectiveness of the integration of LLMs into Reinforcement Lear
 
 \subsubsection{Standard Proximal Policy Optimization}
 
-Our baseline is the PPO algorithm, which is a policy gradient method that has been established as a state-of-art approach to solving reinforcement learning problems over the last few years. The main idea behind this algorithm is that the new policy is clipped so that it does not move too quickly and too far from the old policy, which helps to avoid changing the policy too drastically during the update. With this simple concept, PPO has outperformed previous methods such as Deep-Q Networks and A2C, while being relatively simple to implement\cite{ppo}.
+Our baseline is the PPO algorithm, which is a policy gradient method that has been established as a state-of-art approach to solving reinforcement learning problems over the last few years. PPO simply uses an Actor-Critic network which is updated using policy gradient methods, with the modification that the policy is not allowed to change too drastically when updating. With this simple concept, PPO has outperformed previous methods such as Deep-Q Networks and A2C, while being relatively simple to implement\cite{ppo}.
 
 For the hyperparameters used in our PPO implementation, see the \nameref{sec:appendixtext}.
 
@@ -100,11 +100,11 @@ In this case, the LLM is integrated as part of the PPO algorithm, directly influ
 
 \subsubsection{PPO with LLM Integrated in the Reward Function}
 
-In this method, the agent is trained using the same method as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM at every timestep. After being given the state observation, the LLM is asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, another LLM is used for semantic similarity comparison, comparing the proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional pseudo-reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards, which only take effect when the policy is updated through backpropogation after an entire episode is completed. Thus, this method functions more as an advisor, influencing the policy in a more long term capacity than the coaching of the policy influencer. Throughout the paper, we will refer to this as LLM reward shaping.
+In this method, the agent is trained using the same method as in the baseline. The agent's state observation is encoded to natural text, and sent as part of a prompt to the LLM at every timestep. After being given the state observation, the LLM is asked to respond with a list of recommended actions for the agent to perform. The agent then acts independently of the LLM for that timestep, as dictated by the baseline RL algorithm it is trained with. As it does so, its chosen action is encoded to natural text. Then, another LLM is used for semantic similarity comparison, comparing the proposed action to the action performed by the agent. Finally, high semantic similarity gives an additional pseudo-reward which is added to the reward of the environment. Compared to the policy influencing method above, this approach is less direct, as the policy is only indirectly affected by the LLM through these additional rewards, which only take effect when the policy is updated through backpropagation after an entire episode is completed. Thus, this method functions more as an advisor, influencing the policy in a more long term capacity than the coaching of the policy influencer. Throughout the paper, we will refer to this as LLM reward shaping.
 
 \subsubsection{PPO with both LLM reward shaping and LLM policy influencing}
 
-Finally, we combine the two LLM integrations, hoping to combine the direct influence of our policy integration with the more indirect reward shaping. Thus, we are affecting the policy in two ways: Through reward shaping, we are causing the policy to update to better attain the aforementioned pseudo-rewards, which will encourage completing of subgoals which are necessary to complete the actual goal of the environment, but which do not give out intermediate rewards. Through policy influencing, we are nudging the agent to take favorable actions by directly altering the action probabilities, which will make it more likely that the agent completes the given task and receives an actual reward from the environment. Thus, the agent will more quickly discover the correct policy. We call this the \textbf{Actor-Advisor-Critic-Coach} method, or \textbf{A2C2} for short.
+Finally, we combine the two LLM integrations, hoping to combine the direct influence of our policy integration with the more indirect reward shaping. Thus, we are affecting the policy in two ways: Through reward shaping, we are causing the policy to update to better attain the aforementioned pseudo-rewards, which will encourage completion of subgoals that are necessary to complete the actual goal of the environment, but which do not give out intermediate rewards. Through policy influencing, we are nudging the agent to take favorable actions by directly altering the action probabilities, which will make it more likely that the agent completes the given task and receives an actual reward from the environment. Thus, the agent will more quickly discover the correct policy. We call this the \textbf{Actor-Advisor-Coach-Critic} method, or \textbf{A2C2} for short.
 
 
 \subsection{Language Models}
@@ -113,7 +113,7 @@ In all these cases, we need two language models; one to generate the suggestions
 
 For text generation, we have decided to utilize an LLM from the Llama open-source family of language models developed by Meta AI, first released in Febraury, 2023. Specifically, we choose Llama 2, which has been trained using 40\% more data than its predecessor Llama 1, and has double the context length\cite{llama}. In the experiments presented below, we use the smallest version of Llama 2, with 7 billion parameters, which we download to run locally and reduce the bottleneck effect and cost of having to call an API to a model hosted by someone else. The reason for not using any of the larger Llama 2 models is simply the hardware limitation we face, with the 7B model requiring 19GB of VRAM to be run. 
 
-Some research papers propose fine-tuning of LLMs as a means of leveraging the capabilites of the language models for decision-making purposes even further \cite{grounding}. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, this is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addtion, the act of fine-tuning LLM is a rather time-comsuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
+Some research papers propose fine-tuning of LLMs as a means of leveraging the capabilities of the language models for decision-making purposes even further \cite{grounding}. Our plan of action, on the other hand, aims at evaluating the efficacy of the LLM without any previous pre-tuning. From the perspective of reinforcement learning, this is the appropriate course of action, as the LLM should not possess any previous knowledge about the task at hand, just like the agent should not. In addition, the act of fine-tuning LLM is a rather time-consuming process, requiring the generation and structuring of a new dataset, and also vast hardware resources. 
 
 Instead of fine tuning the LLM, we use few-shot learning when prompting, giving the LLM a few examples of observations and correct corresponding action recommendations. This is an effective way to guide the LLM for our specific purposes without requiring us to retrain the entire network.
 
@@ -122,11 +122,11 @@ For generating semantic similarity values, we follow \cite{ellm} and use Sentenc
 
 \section{Experiments}
 
-We perform experiments to compare different methods of integrating LLMs with the PPO algorithm, specifically comparing their ability to guide the early exploration of an RL model in a reward-sparse environment. Even state-of-art RL algorithms may struggle in such environments. Therefore, it is the perfect arena to see if the high generalization capabilites of pre-trained Large Language Models will lead to better results over using only RL methods.
+We perform experiments to compare different methods of integrating LLMs with the PPO algorithm, specifically comparing their ability to guide the early exploration of an RL model in a reward-sparse environment. Even state-of-art RL algorithms may struggle in such environments. Therefore, it is the perfect arena to see if the high generalization capabilities of pre-trained Large Language Models will lead to better results over using only RL methods.
 
 \subsection{Minigrid Environments}
 
-For our experiments, we choose the Minigrid library. The Minigrid library contains simple grid world environments. An important characteristic of all these environments is that they only give reward on the completion of the goal of the environment. In other words, the environment only ever gives out a single reward per episode, given that the agent completes its task. Goals in Minigrid are often simple tasks, such as "unlock the door", "go to the goal", "pick up the red chest", etc. Completing these goals often requires the completion of subtasks; going to the goal might require opening a door, and opening the door might require picking up a key. These environments are partially observable, which means that the agent only receives a seven by seven observation grid, not the entire grid. Figure \ref{doorkeyenv}, shows a typical minigrid environment. In this case, the agent (the red arrow) only sees the left room, and does not know where the goal is. 
+For our experiments, we choose the Minigrid library. The Minigrid library contains simple grid world environments. An important characteristic of all these environments is that they only give reward on the completion of the goal of the environment. In other words, the environment only ever gives out a single reward per episode, given that the agent completes its task. Goals in Minigrid are often simple tasks, such as "unlock the door", "go to the goal", "pick up the red chest", etc. Completing these goals often requires the completion of subtasks; going to the goal might require opening a door, and opening the door might require picking up a key. These environments are partially observable, which means that the agent only receives a seven by seven observation grid, not the entire grid. Figure \ref{doorkeyenv}, shows a typical Minigrid environment. In this case, the agent (the red arrow) only sees the left room, and does not know where the goal is. 
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=3.25in]{figure/doorkeyenv.png}}
@@ -194,7 +194,7 @@ Method & Mean reward & Std reward & Increase over baseline \\
 \hline
 Reward shaping & 0.76 & 0.12 & 10\% \\
 Policy influencing & 0.91 & 0.09 & 32\% \\
-Both & 0.95 & 0.04 & 37\% \\
+A2C2 & 0.95 & 0.04 & 37\% \\
 Baseline & 0.69 & 0.28 & - \\
 \end{tabular}
 \end{center}
@@ -221,13 +221,13 @@ Method & Mean reward & Std reward & Increase over baseline \\
 \hline
 Reward shaping & 0.48 & 0.28 & 24\% \\
 Policy influencing & 0.36 & 0.31 & -6\% \\
-Both & 0.53 & 0.25 & 38\% \\
+A2C2 & 0.53 & 0.25 & 38\% \\
 Baseline & 0.38 & 0.31 & - \\
 \end{tabular}
 \end{center}
 \end{table}
 
-LLM reward shaping gives a noticable improvement to the performance of the model, not just in the early stages of training, but throughout the entire training process. Averaging over all episodes of all eight runs per model, we find that LLM reward shaping receives $24\%$ more reward per episode than PPO trained without LLM rewards. Furthermore, this is an improvement that comes at very little computational cost, because LLM responses can be cached between runs. Of the eight runs on this environment using LLM reward shaping, the last three runs never queried the LLM at all, only relying on the cache of previous answers.
+LLM reward shaping gives a noticeable improvement to the performance of the model, not just in the early stages of training, but throughout the entire training process. Averaging over all episodes of all eight runs per model, we find that LLM reward shaping receives $24\%$ more reward per episode than PPO trained without LLM rewards. Furthermore, this is an improvement that comes at very little computational cost, because LLM responses can be cached between runs. Of the eight runs on this environment using LLM reward shaping, the last three runs never queried the LLM at all, only relying on the cache of previous answers.
 
 Looking at LLM policy influencing, we see that it has resulted in somewhat worse results than using the PPO baseline. Averaging over all eight runs shows that LLM policy influencing only achieves $93\%$ of the reward amount the baseline receives. Judging from the graph, it may seem that policy influencing may have given some initial learning advantage, but ultimately slows learning for the agent further on. As with reward shaping, we have also used caching of LLM responses to significantly decrease the computational overhead cost to a minimum. 
 
@@ -255,7 +255,7 @@ Method & Mean reward & Std reward & Increase over baseline \\
 \hline
 Reward shaping & 0.037 & 0.082 & 275\% \\
 Policy influencing & 0.014 & 0.034 & 43\% \\
-Both & 0.031 & 0.072 & 222\% \\
+A2C2 & 0.031 & 0.072 & 222\% \\
 Baseline & 0.0097 & 0.025 & - \\
 \end{tabular}
 \end{center}
