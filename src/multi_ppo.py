@@ -1,89 +1,33 @@
 from ppo import PPO
-from utils import llama2_policy
+from llama import Llama
+import os
 
-consigliere = llama2_policy("use the key to open the door and then get to the goal", cos_sim_threshold=0, similarity_modifier=0.1)
+base_path = os.path.dirname(__file__)
 
-print("Starting policy 1")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy1",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.agent.consigliere.reset_cache()
-ppo.train()
+generator = Llama.build(
+    ckpt_dir=os.path.join(base_path, "../llama-2-7b-chat"),
+    tokenizer_path=os.path.join(
+        base_path, "../llama-2-7b-chat/tokenizer.model"
+    ),
+    max_seq_len=2048,
+    max_batch_size=6,
+)
 
-print("Starting policy 2")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy2",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.agent.consigliere.reset_cache()
-ppo.train()
+# make the generator something stupid if you think it will never be called
+# because of caching. Good if you want to run it with out a big gpu
+# generator = "a straight up dog"
 
-print("Starting policy 3")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy3",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.agent.consigliere.reset_cache()
-ppo.train()
 
-print("Starting policy 4")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy4",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.agent.consigliere.reset_cache()
-ppo.train()
-
-print("Starting policy 5")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy5",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.agent.consigliere.reset_cache()
-ppo.train()
-
-print("Starting policy 6")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy6",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.train()
-
-print("Starting policy 7")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy7",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.train()
-
-print("Starting policy 8")
-ppo = PPO(
-        "hyperparams.json",
-        result_file="data/doorkey_policy8",
-        reward=False,
-        policy=True,
-        consigliere=consigliere,
-    )
-ppo.train()
+for i in range(1, 9):
+    print("--------------------------------------")
+    print(f"Starting policy {i}")
+    ppo = PPO(
+            "hyperparams.json",
+            result_file=f"data/unlockpickup_policy{i}05-1",
+            reward=False,
+            policy=True,
+            generator=generator,
+            policy_sim_thres=0.5,
+            policy_sim_mod=1,
+        )
+    ppo.train()

@@ -34,13 +34,6 @@ def load_model(model):
     model.load_state_dict(torch.load(file_path))
 
 
-def checkpoint():
-    # TODO: Implement a function for saving model when the perforamce reaches a certain level.
-    # Intention is to use the "save_model(model)" method
-    raise NotImplementedError()
-
-
-# TODO: Transfer model to device a.k.a. to GPU
 class Agent(nn.Module):
     """
     Descr:
@@ -72,6 +65,7 @@ class Agent(nn.Module):
         goal = env.reset()[0]["mission"]
         threshold = 0.84 if policy_sim_thres is None else policy_sim_thres
         modifier = 0.01 if policy_sim_mod is None else policy_sim_mod
+        # consigliere is a different name for coach
         self.consigliere = llama2_policy(goal, cos_sim_threshold=threshold, similarity_modifier=modifier, generator=generator) if llama else None
 
 
@@ -104,6 +98,9 @@ class Agent(nn.Module):
             else:
                 unflat_obs = observation.reshape((7, 7, 3)).to(torch.int64)
                 #self.consigliere.suggest(unflat_obs)
+
+                # consigliere, which is the coach, gives advisor values instead of coach values.
+                # This is done to confuse the reader
                 advisor_values = self.consigliere.give_values(np.array(unflat_obs.cpu())).to(torch.float64)
 
         probs = Categorical(logits=logits)

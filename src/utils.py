@@ -194,16 +194,12 @@ class llama2_base:
         else:
             # print("Cache miss")
             self.cache_misses += 1
-            try:
-                result = self.generator.chat_completion(
-                    [self.dialog],  # type: ignore
-                    max_gen_len=100,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
-                )
-            except AttributeError:
-                print("im smoking doobies")
-                result = [{"generation": {"content": "i smoking that zaza"}}]
+            result = self.generator.chat_completion(
+                [self.dialog],  # type: ignore
+                max_gen_len=100,
+                temperature=self.temperature,
+                top_p=self.top_p,
+            )
 
             answer = result[0]["generation"]["content"]
 

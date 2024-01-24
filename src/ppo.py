@@ -318,8 +318,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--policy", type=bool, help="Use LLM policy", default=None
     )
-    parser.add_argument("-a", "--allow_farming", action="store_true")
-    parser.add_argument("-d", "--doobie", action="store_true")
+    parser.add_argument("-a", "--allow_farming", action="store_true", help="Allow for getting multiple rewards for the same observation. Should be off for reward shaping and on for policy shaping.")
+    parser.add_argument("-d", "--doobie", action="store_true", help="Fake the generator, hope that everything is cached so that it is never called. If it is called the program will fail. Only use this if you are sure that all possible observations have been cached.")
 
     args = parser.parse_args()
     print(args)
